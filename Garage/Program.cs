@@ -18,30 +18,11 @@ class Program {
     }
 
 
-    public abstract class Vehicle : IVehicle {
-        protected Vehicle(int numWheels, VehicleColor color, string licencePlate, double topSpeed) {
-            NumWheels = numWheels;
-            Color = color;
-            LicencePlate = licencePlate;
-            TopSpeed = topSpeed;
-        }
-
-        public int NumWheels { get; }
-        public VehicleColor Color { get; }
-        public string LicencePlate { get; }
-        public double TopSpeed { get; }
-    }
+    public abstract record Vehicle(int NumWheels, VehicleColor Color, string LicencePlate, double TopSpeed) : IVehicle;
 
 
-    public class Car : Vehicle {
-        public Car(int numWheels, VehicleColor color, string licencePlate, double topSpeed, int numDoors) : base(numWheels,
-            color,
-            licencePlate, topSpeed) {
-            NumDoors = numDoors;
-        }
-
-        public int NumDoors { get; }
-    }
+    public record Car(int NumWheels, VehicleColor Color, string LicencePlate, double TopSpeed, int NumDoors)
+        : Vehicle(NumWheels, Color, LicencePlate, TopSpeed);
 
 
     public enum VehicleColor {
