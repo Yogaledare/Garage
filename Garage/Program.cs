@@ -1,98 +1,398 @@
-﻿using System.Drawing;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using Garage.Validation;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Garage;
 
-class Program {
+public partial class Program {
     static void Main(string[] args) {
+        var host = Host.CreateDefaultBuilder(args)
+            .ConfigureServices(services => {
+                // services.AddSingleton<ILicensePlateRegistry, LicensePlateRegistry>();
+                services.AddSingleton<IGarageHandler<IVehicle>, GarageHandler<IVehicle>>();
+            })
+            .UseConsoleLifetime()
+            .Build();
+
+
+        AddVehicle();
+        // RetrieveInteger(0, 5); 
+        
+        
+    }
+
+
+    public static void MainTests() {
         var garage = new Garage<Car>(4);
 
-        var car = new Car(4, VehicleColor.Black, "ABC123", 160, 5); 
-        garage.Add(car);
+        var cars = new Garage<Car>(10) {
+            new Car("ABC123", VehicleColor.Black, 100.0, 2),
+            new Car("ABC456", VehicleColor.Black, 100.0, 10),
+            new Car("ABc123", VehicleColor.Black, 100.0, 10),
+            new Car("ABc123", VehicleColor.Black, 100.0, 2),
+        };
 
-        var r1 = garage.GetAll();
 
-        foreach (var c in r1) {
-            Console.WriteLine(c);
+        foreach (var car in cars) {
+            var validationResults = new List<ValidationResult>();
+            var validationContext = new ValidationContext(car);
+            bool isValid = Validator.TryValidateObject(car, validationContext, validationResults, true);
+
+            if (!isValid) {
+                foreach (var validationResult in validationResults) {
+                    Console.WriteLine(validationResult.ErrorMessage);
+                }
+            }
+            else {
+                Console.WriteLine("Validation passed.");
+            }
         }
-
     }
 
 
-    public abstract record Vehicle(int NumWheels, VehicleColor Color, string LicencePlate, double TopSpeed) : IVehicle;
+    public static void AddVehicle() {
+        var vehicleTypes = Assembly.GetExecutingAssembly()
+            .GetTypes()
+            .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+            .ToList();
 
+        for (var i = 0; i < vehicleTypes.Count; i++) {
+            Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
+        }
 
-    public record Car(int NumWheels, VehicleColor Color, string LicencePlate, double TopSpeed, int NumDoors)
-        : Vehicle(NumWheels, Color, LicencePlate, TopSpeed);
+        var selectedIndex = RetrieveInteger(0, vehicleTypes.Count - 1); 
+        var selectedVehicleType = vehicleTypes[selectedIndex];
 
+        var constructor = selectedVehicleType.GetConstructors().First();
+        var parameterValues = RetrieveParameterValues(constructor);
 
-    public enum VehicleColor {
-        Black,
-        White,
+        var vehicle = (IVehicle) constructor.Invoke(parameterValues);
+        Console.WriteLine(vehicle);
     }
 
 
-    public interface IVehicle {
-        int NumWheels { get; }
-        VehicleColor Color { get; }
-        public string LicencePlate { get; }
-        double TopSpeed { get; }
+    public static void CreateVehicleRoutine() {
+        
+        
     }
 
+    
+    private static object[] RetrieveParameterValues(ConstructorInfo constructor) {
+        var parameters = constructor.GetParameters();
+        var parameterValues = new object[parameters.Length];
 
-    public class Garage<T> where T : IVehicle {
-        private T[] _items;
-
-        private int _size;
-
-        private bool IsFull => _size >= _items.Length;
-
-
-        public Garage(int size, int preFilled = 0) {
-            _items = new T[size];
-        }
-
-
-        public IEnumerable<T> GetAll() {
-            return _items.Take(_size);
-        }
-
-
-        public void Add(T item) {
-            if (IsFull) {
-                return; 
+        for (var i = 0; i < parameters.Length; i++) {
+            var parameterType = parameters[i].ParameterType;
+            Console.WriteLine($"Enter {parameters[i].Name} ({parameters[i].ParameterType.Name}):");
+            
+            if (parameterType.IsEnum) {
+                var enumValues = Enum.GetValues(parameterType);
+                
+                var j = 0;
+                foreach (var value in enumValues) {
+                    Console.WriteLine($"{j++}: {value}");
+                }
+                var enumIndex = RetrieveInteger(0, enumValues.Length - 1); 
+                parameterValues[i] = enumValues.GetValue(enumIndex);
             }
 
-            _items[_size++] = item; 
+            else {
+                var input = Console.ReadLine();
+                parameterValues[i] = Convert.ChangeType(input, parameters[i].ParameterType);
+            }
         }
 
+        return parameterValues;
+    }
 
-        public bool Remove(T item) {
-            var index = IndexOf(item);
 
-            if (index is -1) return false;
+    public static int RetrieveInteger(int min, int max) {
+        Console.WriteLine($"Make a selection:");
+        while (true) {
+            var input = Console.ReadLine();
+            var validator = new NumericStringValidator(min, max);
+            var validationResult = validator.Validate(input);
+
+            if (validationResult.IsValid) {
+                return int.Parse(input!); 
+            }
             
-            RemoveAt(index);
+            foreach (var error in validationResult.Errors) {
+                Console.WriteLine(error);
+            }
+        }
+    }
+    
+    
+    
+    public static T HandleEnumSelection<T>() where T : Enum {
+        var enumValues = Enum.GetValues(typeof(T))
+            .Cast<T>()
+            .ToList();
+
+        for (int i = 0; i < enumValues.Count; i++) {
+            Console.WriteLine($"{i}: {enumValues[i]}");
+        }
+        
+        var enumIndex = RetrieveInteger(0, enumValues.Count - 1);
+
+        return enumValues[enumIndex]; 
+    }
+
+
+    
+    
+    // public class NumericStringInput(string value) {
+    //     public string Value { get; } = value;
+    // }
+
+
+    public abstract class Vehicle : IVehicle {
+        protected Vehicle(string licencePlate, int numWheels, VehicleColor color, double topSpeed) {
+            LicencePlate = licencePlate;
+            NumWheels = numWheels;
+            Color = color;
+            TopSpeed = topSpeed;
+        }
+
+        [RegularExpression("^[A-Z]{3}[0-9]{3}$", ErrorMessage = "Licence plate must have the format ABC123")]
+        public string LicencePlate { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "Number of wheels must be at least 1.")]
+        public int NumWheels { get; set; }
+
+        public VehicleColor Color { get; set; }
+
+        public double TopSpeed { get; set; }
+    }
+
+
+    public class Car : Vehicle {
+        public Car(string licencePlate, VehicleColor color, double topSpeed, int numDoors) : base(
+            licencePlate, 4, color, topSpeed) {
+            NumDoors = numDoors;
+        }
+
+        // [Range(4, int.MaxValue, ErrorMessage = "A car must have at least 4 wheels.")]
+        // public override int NumWheels { get; set; }
+
+        [Range(1, 5, ErrorMessage = "Number of doors must be within [1, 5]")]
+        public int NumDoors { get; init; }
+    }
+
+
+    public interface IGarageHandler<T> where T : IVehicle {
+        bool AddVehicle(T vehicle, Garage<T> garage);
+        bool DoesLicencePlateExist(string licencePlate);
+        void CreateGarage(int capacity);
+    }
+
+    public class GarageHandler<T>(ILicensePlateRegistry licensePlateRegistry) : IGarageHandler<T> where T : IVehicle {
+        private List<Garage<T>> _garages = [];
+
+        public bool AddVehicle(T vehicle, Garage<T> garage) {
+            if (DoesLicencePlateExist(vehicle.LicencePlate)) return false;
+
+            if (garage.IsFull) return false;
+
+            garage.Add(vehicle);
             return true;
         }
 
+        public bool DoesLicencePlateExist(string licencePlate) {
+            return _garages.SelectMany(garage => garage)
+                .Any(vehicle => string.Equals(vehicle.LicencePlate, licencePlate, StringComparison.OrdinalIgnoreCase));
+        }
 
-        private int IndexOf(T item) => Array.IndexOf(_items, item, 0);
-
-
-        private void RemoveAt(int index) {
-            _size--;
-            if (index < _size) {
-                Array.Copy(_items, index + 1, _items, index, _size - index);
-            }
+        public void CreateGarage(int capacity) {
+            _garages.Add(new Garage<T>(capacity));
         }
     }
+
+
+    // 9 / 4    16 / 4
 }
 
 
-// {
-// get {
-// var size = _items.Length;
-// var filled = _nextIndex;
-// return filled < size; 
+
+// if parameters[i].parametertype is enum: 
+// get all possible values for this enum
+// present as with the vehicle types
+// let user input value
+
+// else do the normal thing
+
+
+
+// int.Parse(Console.ReadLine());
+                
+                
+// if (enumIndex >= 0 && enumIndex < enumValues.Length) {
+//     parameterValues[i] = enumValues.GetValue(enumIndex);
 // }
+// else {
+//     Console.WriteLine("Invalid selection. Please select a valid index.");
+//     i--; // Decrement the counter to retry this iteration
+//     continue;
+// }
+
+
+
+
+
+    //
+    // public static void AddVehicle() {
+    //     var vehicleTypes = Assembly.GetExecutingAssembly()
+    //         .GetTypes()
+    //         .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+    //         .ToList();
+    //
+    //     for (var i = 0; i < vehicleTypes.Count; i++) {
+    //         Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
+    //     }
+    //
+    //     // Console.WriteLine("Select a vehicle type by index:");
+    //     var selectedIndex = RetrieveInteger(0, vehicleTypes.Count - 1); 
+    //     // var selectedIndex = int.Parse(Console.ReadLine());
+    //     var selectedVehicleType = vehicleTypes[selectedIndex];
+    //
+    //     var constructor = selectedVehicleType.GetConstructors().First();
+    //     var parameters = constructor.GetParameters();
+    //     var parameterValues = new object[parameters.Length];
+    //
+    //     for (var i = 0; i < parameters.Length; i++) {
+    //         var parameterType = parameters[i].ParameterType;
+    //         Console.WriteLine($"Enter {parameters[i].Name} ({parameters[i].ParameterType.Name}):");
+    //         if (parameterType.IsEnum) {
+    //             MethodInfo handleEnumSelectionMethod = typeof(Program).GetMethod(nameof(HandleEnumSelection), BindingFlags.Public | BindingFlags.Static);
+    //
+    //             // how to call the handleenumselection??
+    //             HandleEnumSelection<parameterType>(); 
+    //
+    //         }
+    //
+    //         else {
+    //             var input = Console.ReadLine();
+    //             // Convert input to the appropriate type. Additional error handling may be required for type conversion.
+    //             parameterValues[i] = Convert.ChangeType(input, parameters[i].ParameterType);
+    //         }
+    //         // if parameters[i].parametertype is enum: 
+    //         // get all possible values for this enum
+    //         // present as with the vehicle types
+    //         // let user input value
+    //
+    //         // else do the normal thing
+    //     }
+    //
+    //     var vehicle = (IVehicle) constructor.Invoke(parameterValues);
+    //
+    //     Console.WriteLine(vehicle);
+    // }
+    //
+    //
+    // public static T HandleEnumSelection<T>() where T : Enum {
+    //     var enumValues = Enum.GetValues(typeof(T))
+    //             .Cast<T>()
+    //             .ToList();
+    //
+    //     for (int i = 0; i < enumValues.Count; i++) {
+    //         Console.WriteLine($"{i}: {enumValues[i]}");
+    //     }
+    //     
+    //     var enumIndex = RetrieveInteger(0, enumValues.Count - 1);
+    //
+    //     return enumValues[enumIndex]; 
+    // }
+    //
+
+
+// reflection - get all classes that implements IVehicle
+
+// present a list of these classes and let the user pick one by giving an index
+
+
+// ------------------------
+
+
+// reflection - get all constrictor arguments for the class that was picked
+
+// go through all constructor arguments 
+
+//    ask for all inputs
+
+// make an vehicle object calling the constructor of the chosen class
+
+// validate the vehicle object with fluent validation
+
+// the validation process also needs to know if the garage handler has this license plate already-
+// so somehow it needs a reference to the garage handler, either as an argument or via DI
+
+// read the results and check what went wrong
+
+// print errors and what parameter they correspond to
+
+// for all parameters that were wrong, ask again for input
+
+// create a new object or update fields of the object that failed validation
+
+// validate again. loop like this until there are no validation errors. 
+
+// add the vehicle with no validation errors to the garagehandler, using a DI reference to this class
+
+
+// var car = new Car("ABC123", VehicleColor.Black, 100.0, 2);
+// var car2 = new Car("ABC123", VehicleColor.Black, 100.0, 10);
+//
+//
+// // Prepare for validation
+// var validationResults = new List<ValidationResult>();
+// var validationContext = new ValidationContext(car, serviceProvider: null, items: null);
+//
+
+
+// Perform validation
+
+// Check validation result
+
+
+// var car1 = new Car("ABC123", 4, VehicleColor.Black, 160, 5);
+// garage.Add(car1);
+// var car2 = new Car("ABC123", 4, VehicleColor.Black, 160, 6);
+// garage.Add(car2);
+// // garage.Add(car2);
+// var car3 = new Car("ABC123", 4, VehicleColor.Black, 160, 7);
+// garage.Add(car3);
+// garage.Remove(car2);
+// var r1 = garage.GetAll();
+
+// foreach (var c in r1) {
+// Console.WriteLine(c);
+// }
+//
+// var validator = new LicensePlateValidator();
+// var test1 = "ABC123";
+// var test2 = "acb123";
+// var res1 = validator.Validate(test1);
+// var res2 = validator.Validate(test2);
+//
+//
+// if (!res1.IsValid) {
+//     foreach (var failure in res1.Errors) {
+//         Console.WriteLine($"Validation error: {failure.ErrorMessage}");
+//     }
+// }
+// else {
+//     Console.WriteLine("License plate is valid.");
+// }
+//
+//
+// if (!res2.IsValid) {
+//     foreach (var failure in res2.Errors) {
+//         Console.WriteLine($"Validation error: {failure.ErrorMessage}");
+//     }
+// }
+// else {
+//     Console.WriteLine("License plate is valid.");
 // }
