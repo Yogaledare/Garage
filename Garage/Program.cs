@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Garage.Validation;
+using LanguageExt.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -12,47 +13,22 @@ public partial class Program {
             .ConfigureServices(services => {
                 // services.AddSingleton<ILicensePlateRegistry, LicensePlateRegistry>();
                 services.AddSingleton<IGarageHandler<IVehicle>, GarageHandler<IVehicle>>();
+                services.AddSingleton<ITypeConversionService, TypeConversionService>();
             })
             .UseConsoleLifetime()
             .Build();
 
 
         AddVehicle();
+
         // RetrieveInteger(0, 5); 
-        
-        
     }
 
 
-    public static void MainTests() {
-        var garage = new Garage<Car>(4);
+    private static void AddVehicle() {
+        // var i = RetrieveInput("hello", i => ValidateNumberBounded(i, 0, 5));
+        // Console.WriteLine(i);
 
-        var cars = new Garage<Car>(10) {
-            new Car("ABC123", VehicleColor.Black, 100.0, 2),
-            new Car("ABC456", VehicleColor.Black, 100.0, 10),
-            new Car("ABc123", VehicleColor.Black, 100.0, 10),
-            new Car("ABc123", VehicleColor.Black, 100.0, 2),
-        };
-
-
-        foreach (var car in cars) {
-            var validationResults = new List<ValidationResult>();
-            var validationContext = new ValidationContext(car);
-            bool isValid = Validator.TryValidateObject(car, validationContext, validationResults, true);
-
-            if (!isValid) {
-                foreach (var validationResult in validationResults) {
-                    Console.WriteLine(validationResult.ErrorMessage);
-                }
-            }
-            else {
-                Console.WriteLine("Validation passed.");
-            }
-        }
-    }
-
-
-    public static void AddVehicle() {
         var vehicleTypes = Assembly.GetExecutingAssembly()
             .GetTypes()
             .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
@@ -62,122 +38,43 @@ public partial class Program {
             Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
         }
 
-        var selectedIndex = RetrieveInteger(0, vehicleTypes.Count - 1); 
-        var selectedVehicleType = vehicleTypes[selectedIndex];
 
-        var constructor = selectedVehicleType.GetConstructors().First();
-        var parameterValues = RetrieveParameterValues(constructor);
+        var numTypes = vehicleTypes.Count;
+        var index = RetrieveInput("", i => ValidateNumberBounded(i, 0, numTypes - 1));
 
-        var vehicle = (IVehicle) constructor.Invoke(parameterValues);
-        Console.WriteLine(vehicle);
-    }
+        var vehicle = vehicleTypes[index];
+        Console.WriteLine(vehicle.Name);
 
+        foreach (var propertyInfo in vehicle.GetProperties()) {
+            var propertyAttributes = propertyInfo.GetCustomAttributes<ValidationAttribute>();
 
-    public static void CreateVehicleRoutine() {
-        
-        
-    }
-
-    
-    private static object[] RetrieveParameterValues(ConstructorInfo constructor) {
-        var parameters = constructor.GetParameters();
-        var parameterValues = new object[parameters.Length];
-
-        for (var i = 0; i < parameters.Length; i++) {
-            var parameterType = parameters[i].ParameterType;
-            Console.WriteLine($"Enter {parameters[i].Name} ({parameters[i].ParameterType.Name}):");
-            
-            if (parameterType.IsEnum) {
-                var enumValues = Enum.GetValues(parameterType);
-                
-                var j = 0;
-                foreach (var value in enumValues) {
-                    Console.WriteLine($"{j++}: {value}");
-                }
-                var enumIndex = RetrieveInteger(0, enumValues.Length - 1); 
-                parameterValues[i] = enumValues.GetValue(enumIndex);
-            }
-
-            else {
-                var input = Console.ReadLine();
-                parameterValues[i] = Convert.ChangeType(input, parameters[i].ParameterType);
-            }
-        }
-
-        return parameterValues;
-    }
-
-
-    public static int RetrieveInteger(int min, int max) {
-        Console.WriteLine($"Make a selection:");
-        while (true) {
-            var input = Console.ReadLine();
-            var validator = new NumericStringValidator(min, max);
-            var validationResult = validator.Validate(input);
-
-            if (validationResult.IsValid) {
-                return int.Parse(input!); 
-            }
-            
-            foreach (var error in validationResult.Errors) {
-                Console.WriteLine(error);
+            foreach (var propertyAttribute in propertyAttributes) {
+                Console.WriteLine(propertyAttribute);
+                Console.WriteLine(propertyAttribute.ErrorMessage);
+                Console.WriteLine();
             }
         }
     }
-    
-    
-    
-    public static T HandleEnumSelection<T>() where T : Enum {
-        var enumValues = Enum.GetValues(typeof(T))
-            .Cast<T>()
-            .ToList();
-
-        for (int i = 0; i < enumValues.Count; i++) {
-            Console.WriteLine($"{i}: {enumValues[i]}");
-        }
-        
-        var enumIndex = RetrieveInteger(0, enumValues.Count - 1);
-
-        return enumValues[enumIndex]; 
-    }
-
-
-    
-    
-    // public class NumericStringInput(string value) {
-    //     public string Value { get; } = value;
-    // }
 
 
     public abstract class Vehicle : IVehicle {
-        protected Vehicle(string licencePlate, int numWheels, VehicleColor color, double topSpeed) {
-            LicencePlate = licencePlate;
-            NumWheels = numWheels;
-            Color = color;
-            TopSpeed = topSpeed;
-        }
-
+        [Required]
         [RegularExpression("^[A-Z]{3}[0-9]{3}$", ErrorMessage = "Licence plate must have the format ABC123")]
-        public string LicencePlate { get; set; }
+        public string? LicencePlate { get; set; }
 
+        [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Number of wheels must be at least 1.")]
         public int NumWheels { get; set; }
 
+        [Required]
         public VehicleColor Color { get; set; }
 
+        [Required]
         public double TopSpeed { get; set; }
     }
 
 
     public class Car : Vehicle {
-        public Car(string licencePlate, VehicleColor color, double topSpeed, int numDoors) : base(
-            licencePlate, 4, color, topSpeed) {
-            NumDoors = numDoors;
-        }
-
-        // [Range(4, int.MaxValue, ErrorMessage = "A car must have at least 4 wheels.")]
-        // public override int NumWheels { get; set; }
-
         [Range(1, 5, ErrorMessage = "Number of doors must be within [1, 5]")]
         public int NumDoors { get; init; }
     }
@@ -185,7 +82,7 @@ public partial class Program {
 
     public interface IGarageHandler<T> where T : IVehicle {
         bool AddVehicle(T vehicle, Garage<T> garage);
-        bool DoesLicencePlateExist(string licencePlate);
+        bool DoesLicencePlateExist(string? licencePlate);
         void CreateGarage(int capacity);
     }
 
@@ -201,7 +98,7 @@ public partial class Program {
             return true;
         }
 
-        public bool DoesLicencePlateExist(string licencePlate) {
+        public bool DoesLicencePlateExist(string? licencePlate) {
             return _garages.SelectMany(garage => garage)
                 .Any(vehicle => string.Equals(vehicle.LicencePlate, licencePlate, StringComparison.OrdinalIgnoreCase));
         }
@@ -212,9 +109,361 @@ public partial class Program {
     }
 
 
-    // 9 / 4    16 / 4
+    public static T RetrieveInput<T>(string prompt, Func<string?, Result<T>> validator) {
+        T? output = default;
+
+        while (true) {
+            Console.Write(prompt);
+            var input = Console.ReadLine();
+            var result = validator(input);
+
+            bool shouldBreak = result.Match(
+                Succ: validatedSentence => {
+                    output = validatedSentence;
+                    return true;
+                },
+                Fail: ex => {
+                    Console.WriteLine(ex.Message);
+                    return false;
+                }
+            );
+
+            if (shouldBreak) {
+                break;
+            }
+        }
+
+        if (output == null) throw new InvalidOperationException("Parsing failed");
+        return output;
+    }
+
+    public static Result<object> ValidateProperty(string? input, PropertyInfo propertyInfo,
+        ITypeConversionService converter) {
+        if (string.IsNullOrEmpty(input)) {
+            var error = new ValidationException("Error: null or empty input");
+            return new Result<object>(error);
+        }
+
+        if (!converter.TryConvert(input, propertyInfo, out var convertedValue)) {
+            var error = new ValidationException($"Failed to convert input to {propertyInfo.PropertyType.Name}.");
+            return new Result<object>(error);
+        }
+        
+        
+
+        var validationAttributes = propertyInfo.GetCustomAttributes<ValidationAttribute>(true);
+
+
+        foreach (var attribute in validationAttributes) {
+            if (!attribute.IsValid(convertedValue)) {
+                var error = new ValidationException(attribute.ErrorMessage);
+                return new Result<object>(error);
+            }
+        }
+
+        return new Result<object>(convertedValue);
+    }
+
+    
+    public static Result<int> ValidateNumberBounded(string? input, int min, int max) {
+        var normalNumberValidationResult = ValidateNumber(input);
+
+        return normalNumberValidationResult.Match(
+            Succ: number => {
+                if (number < min || number > max) {
+                    var error = new ValidationException($"Must be within [{min}, {max}] (inclusive)");
+                    return new Result<int>(error);
+                }
+
+                return number;
+            },
+            Fail: _ => normalNumberValidationResult);
+    }
+
+
+    public static Result<int> ValidateNumber(string? input) {
+        if (string.IsNullOrEmpty(input)) {
+            var error = new ValidationException("Error: null or empty input");
+            return new Result<int>(error);
+        }
+
+        var tokens = input.Split(' ');
+
+        if (tokens.Length > 1) {
+            var error = new ValidationException("Error: too many inputs");
+            return new Result<int>(error);
+        }
+
+        if (!int.TryParse(tokens[0], out int number)) {
+            var error = new ValidationException("Error: cannot parse integer");
+            return new Result<int>(error);
+        }
+
+        return number;
+    }
 }
 
+public interface ITypeConversionService {
+    bool TryConvert(string input, PropertyInfo property, out object? result);
+}
+
+public class TypeConversionService : ITypeConversionService {
+    private readonly Dictionary<Type, Func<string, object?>> _converters;
+
+    public TypeConversionService() {
+        _converters = new Dictionary<Type, Func<string, object?>> {
+            {typeof(int), s => int.TryParse(s, out int i) ? i : null},
+            {typeof(double), s => double.TryParse(s, out double d) ? d : null},
+            {typeof(VehicleColor), s => Enum.TryParse(s, out VehicleColor vc) ? vc : null}
+        };
+    }
+
+    
+    
+    
+    public bool TryConvert(string input, PropertyInfo property, out object? result) {
+        result = null;
+
+        
+        if (_converters.TryGetValue(property.PropertyType, out var converter)) {
+            var convertedValue = converter(input);
+            if (convertedValue != null) {
+                result = convertedValue;
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+//
+//
+//
+// public bool TryConvert(string input, PropertyInfo property, out object? result) {
+//     result = null;
+//
+//         
+//     if (_converters.TryGetValue(property.PropertyType, out var converter)) {
+//         var convertedValue = converter(input);
+//         if (convertedValue != null) {
+//             result = convertedValue;
+//             return true;
+//         }
+//     }
+//
+//     return false;
+// }
+//
+
+//
+// public abstract class Vehicle : IVehicle {
+//     // protected Vehicle(string licencePlate, int numWheels, VehicleColor color, double topSpeed) {
+//     //     LicencePlate = licencePlate;
+//     //     NumWheels = numWheels;
+//     //     Color = color;
+//     //     TopSpeed = topSpeed;
+//     // }
+//
+//     [Required]
+//     [RegularExpression("^[A-Z]{3}[0-9]{3}$", ErrorMessage = "Licence plate must have the format ABC123")]
+//     public string? LicencePlate { get; set; }
+//
+//     [Range(1, int.MaxValue, ErrorMessage = "Number of wheels must be at least 1.")]
+//     public int NumWheels { get; set; }
+//
+//     public VehicleColor Color { get; set; }
+//
+//     public double TopSpeed { get; set; }
+// }
+//
+//
+// public class Car : Vehicle {
+//     // public Car(string licencePlate, VehicleColor color, double topSpeed, int numDoors) : base(
+//     //     licencePlate, 4, color, topSpeed) {
+//     //     NumDoors = numDoors;
+//     // }
+//
+//     // [Range(4, int.MaxValue, ErrorMessage = "A car must have at least 4 wheels.")]
+//     // public override int NumWheels { get; set; }
+//
+//     [Range(1, 5, ErrorMessage = "Number of doors must be within [1, 5]")]
+//     public int NumDoors { get; init; }
+// }
+//
+
+
+// public static void AddVehicle() {
+//     var vehicleTypes = Assembly.GetExecutingAssembly()
+//         .GetTypes()
+//         .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+//         .ToList();
+//
+//     for (var i = 0; i < vehicleTypes.Count; i++) {
+//         Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
+//     }
+//
+//     var selectedIndex = RetrieveInteger(0, vehicleTypes.Count - 1); 
+//     var selectedVehicleType = vehicleTypes[selectedIndex];
+//
+//     var constructor = selectedVehicleType.GetConstructors().First();
+//     var parameterValues = RetrieveParameterValues(constructor);
+//
+//     var vehicle = (IVehicle) constructor.Invoke(parameterValues);
+//     Console.WriteLine(vehicle);
+// }
+
+
+// public class NumericStringInput(string value) {
+//     public string Value { get; } = value;
+// }
+
+//
+//
+//
+// public static void MainTests() {
+//     var garage = new Garage<Car>(4);
+//
+//     // var cars = new Garage<Car>(10) {
+//     //     new Car("ABC123", VehicleColor.Black, 100.0, 2),
+//     //     new Car("ABC456", VehicleColor.Black, 100.0, 10),
+//     //     new Car("ABc123", VehicleColor.Black, 100.0, 10),
+//     //     new Car("ABc123", VehicleColor.Black, 100.0, 2),
+//     // };
+//
+//
+//     foreach (var car in cars) {
+//         var validationResults = new List<ValidationResult>();
+//         var validationContext = new ValidationContext(car);
+//         bool isValid = Validator.TryValidateObject(car, validationContext, validationResults, true);
+//
+//         if (!isValid) {
+//             foreach (var validationResult in validationResults) {
+//                 Console.WriteLine(validationResult.ErrorMessage);
+//             }
+//         }
+//         else {
+//             Console.WriteLine("Validation passed.");
+//         }
+//     }
+// }
+
+
+// public static T HandleEnumSelection<T>() where T : Enum {
+//     var enumValues = Enum.GetValues(typeof(T))
+//         .Cast<T>()
+//         .ToList();
+//
+//     for (int i = 0; i < enumValues.Count; i++) {
+//         Console.WriteLine($"{i}: {enumValues[i]}");
+//     }
+//
+//     var enumIndex = RetrieveInteger(0, enumValues.Count - 1);
+//
+//     return enumValues[enumIndex];
+// }
+
+
+// public static int RetrieveInteger(int min, int max) {
+//     Console.WriteLine($"Make a selection:");
+//     while (true) {
+//         var input = Console.ReadLine();
+//         var validator = new NumericStringValidator(min, max);
+//         var validationResult = validator.Validate(input);
+//
+//         if (validationResult.IsValid) {
+//             return int.Parse(input!);
+//         }
+//
+//         foreach (var error in validationResult.Errors) {
+//             Console.WriteLine(error);
+//         }
+//     }
+// }
+
+
+// public static Result<int> ValidateNumberBounded(string? input, int min, int max) {
+//     if (string.IsNullOrEmpty(input)) {
+//         var error = new ValidationException("Must be non-null");
+//         return new Result<int>(error);
+//     }
+//
+//     var tokens = input.Split(' ');
+//
+//     if (tokens.Length > 1) {
+//         var error = new ValidationException("Can only have a single number");
+//         return new Result<int>(error);
+//     }
+//
+//     if (!int.TryParse(tokens[0], out int number)) {
+//         var error = new ValidationException("Must be parsable to an int");
+//         return new Result<int>(error);
+//     }
+//
+//
+//     
+//     return number;
+// }
+
+
+//
+// public static void AddVehicle() {
+//     var vehicleTypes = Assembly.GetExecutingAssembly()
+//         .GetTypes()
+//         .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+//         .ToList();
+//
+//     for (var i = 0; i < vehicleTypes.Count; i++) {
+//         Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
+//     }
+//
+//     var selectedIndex = RetrieveInteger(0, vehicleTypes.Count - 1); 
+//     var selectedVehicleType = vehicleTypes[selectedIndex];
+//
+//     var constructor = selectedVehicleType.GetConstructors().First();
+//     var parameterValues = RetrieveParameterValues(constructor);
+//
+//     var vehicle = (IVehicle) constructor.Invoke(parameterValues);
+//     Console.WriteLine(vehicle);
+// }
+//
+//
+// public static void CreateVehicleRoutine() {
+//         
+//         
+// }
+//
+//     
+// private static object[] RetrieveParameterValues(ConstructorInfo constructor) {
+//     var parameters = constructor.GetParameters();
+//     var parameterValues = new object[parameters.Length];
+//
+//     for (var i = 0; i < parameters.Length; i++) {
+//         var parameterType = parameters[i].ParameterType;
+//         Console.WriteLine($"Enter {parameters[i].Name} ({parameters[i].ParameterType.Name}):");
+//             
+//         if (parameterType.IsEnum) {
+//             var enumValues = Enum.GetValues(parameterType);
+//                 
+//             var j = 0;
+//             foreach (var value in enumValues) {
+//                 Console.WriteLine($"{j++}: {value}");
+//             }
+//             var enumIndex = RetrieveInteger(0, enumValues.Length - 1); 
+//             parameterValues[i] = enumValues.GetValue(enumIndex);
+//         }
+//
+//         else {
+//             var input = Console.ReadLine();
+//             parameterValues[i] = Convert.ChangeType(input, parameters[i].ParameterType);
+//         }
+//     }
+//
+//     return parameterValues;
+// }
+//
+//
+//
 
 
 // if parameters[i].parametertype is enum: 
@@ -225,10 +474,9 @@ public partial class Program {
 // else do the normal thing
 
 
-
 // int.Parse(Console.ReadLine());
-                
-                
+
+
 // if (enumIndex >= 0 && enumIndex < enumValues.Length) {
 //     parameterValues[i] = enumValues.GetValue(enumIndex);
 // }
@@ -239,73 +487,70 @@ public partial class Program {
 // }
 
 
-
-
-
-    //
-    // public static void AddVehicle() {
-    //     var vehicleTypes = Assembly.GetExecutingAssembly()
-    //         .GetTypes()
-    //         .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-    //         .ToList();
-    //
-    //     for (var i = 0; i < vehicleTypes.Count; i++) {
-    //         Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
-    //     }
-    //
-    //     // Console.WriteLine("Select a vehicle type by index:");
-    //     var selectedIndex = RetrieveInteger(0, vehicleTypes.Count - 1); 
-    //     // var selectedIndex = int.Parse(Console.ReadLine());
-    //     var selectedVehicleType = vehicleTypes[selectedIndex];
-    //
-    //     var constructor = selectedVehicleType.GetConstructors().First();
-    //     var parameters = constructor.GetParameters();
-    //     var parameterValues = new object[parameters.Length];
-    //
-    //     for (var i = 0; i < parameters.Length; i++) {
-    //         var parameterType = parameters[i].ParameterType;
-    //         Console.WriteLine($"Enter {parameters[i].Name} ({parameters[i].ParameterType.Name}):");
-    //         if (parameterType.IsEnum) {
-    //             MethodInfo handleEnumSelectionMethod = typeof(Program).GetMethod(nameof(HandleEnumSelection), BindingFlags.Public | BindingFlags.Static);
-    //
-    //             // how to call the handleenumselection??
-    //             HandleEnumSelection<parameterType>(); 
-    //
-    //         }
-    //
-    //         else {
-    //             var input = Console.ReadLine();
-    //             // Convert input to the appropriate type. Additional error handling may be required for type conversion.
-    //             parameterValues[i] = Convert.ChangeType(input, parameters[i].ParameterType);
-    //         }
-    //         // if parameters[i].parametertype is enum: 
-    //         // get all possible values for this enum
-    //         // present as with the vehicle types
-    //         // let user input value
-    //
-    //         // else do the normal thing
-    //     }
-    //
-    //     var vehicle = (IVehicle) constructor.Invoke(parameterValues);
-    //
-    //     Console.WriteLine(vehicle);
-    // }
-    //
-    //
-    // public static T HandleEnumSelection<T>() where T : Enum {
-    //     var enumValues = Enum.GetValues(typeof(T))
-    //             .Cast<T>()
-    //             .ToList();
-    //
-    //     for (int i = 0; i < enumValues.Count; i++) {
-    //         Console.WriteLine($"{i}: {enumValues[i]}");
-    //     }
-    //     
-    //     var enumIndex = RetrieveInteger(0, enumValues.Count - 1);
-    //
-    //     return enumValues[enumIndex]; 
-    // }
-    //
+//
+// public static void AddVehicle() {
+//     var vehicleTypes = Assembly.GetExecutingAssembly()
+//         .GetTypes()
+//         .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+//         .ToList();
+//
+//     for (var i = 0; i < vehicleTypes.Count; i++) {
+//         Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
+//     }
+//
+//     // Console.WriteLine("Select a vehicle type by index:");
+//     var selectedIndex = RetrieveInteger(0, vehicleTypes.Count - 1); 
+//     // var selectedIndex = int.Parse(Console.ReadLine());
+//     var selectedVehicleType = vehicleTypes[selectedIndex];
+//
+//     var constructor = selectedVehicleType.GetConstructors().First();
+//     var parameters = constructor.GetParameters();
+//     var parameterValues = new object[parameters.Length];
+//
+//     for (var i = 0; i < parameters.Length; i++) {
+//         var parameterType = parameters[i].ParameterType;
+//         Console.WriteLine($"Enter {parameters[i].Name} ({parameters[i].ParameterType.Name}):");
+//         if (parameterType.IsEnum) {
+//             MethodInfo handleEnumSelectionMethod = typeof(Program).GetMethod(nameof(HandleEnumSelection), BindingFlags.Public | BindingFlags.Static);
+//
+//             // how to call the handleenumselection??
+//             HandleEnumSelection<parameterType>(); 
+//
+//         }
+//
+//         else {
+//             var input = Console.ReadLine();
+//             // Convert input to the appropriate type. Additional error handling may be required for type conversion.
+//             parameterValues[i] = Convert.ChangeType(input, parameters[i].ParameterType);
+//         }
+//         // if parameters[i].parametertype is enum: 
+//         // get all possible values for this enum
+//         // present as with the vehicle types
+//         // let user input value
+//
+//         // else do the normal thing
+//     }
+//
+//     var vehicle = (IVehicle) constructor.Invoke(parameterValues);
+//
+//     Console.WriteLine(vehicle);
+// }
+//
+//
+// public static T HandleEnumSelection<T>() where T : Enum {
+//     var enumValues = Enum.GetValues(typeof(T))
+//             .Cast<T>()
+//             .ToList();
+//
+//     for (int i = 0; i < enumValues.Count; i++) {
+//         Console.WriteLine($"{i}: {enumValues[i]}");
+//     }
+//     
+//     var enumIndex = RetrieveInteger(0, enumValues.Count - 1);
+//
+//     return enumValues[enumIndex]; 
+// }
+//
 
 
 // reflection - get all classes that implements IVehicle
