@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Garage.Validation;
+using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,13 +20,13 @@ public partial class Program {
             .Build();
 
 
-        AddVehicle();
+        AddVehicle(host.Services.GetService<ITypeConversionService>());
 
         // RetrieveInteger(0, 5); 
     }
 
 
-    private static void AddVehicle() {
+    private static void AddVehicle(ITypeConversionService converter) {
         // var i = RetrieveInput("hello", i => ValidateNumberBounded(i, 0, 5));
         // Console.WriteLine(i);
 
@@ -53,6 +54,11 @@ public partial class Program {
                 Console.WriteLine(propertyAttribute.ErrorMessage);
                 Console.WriteLine();
             }
+        }
+
+        foreach (var propertyInfo in vehicle.GetProperties()) {
+            // error here: 
+            var entry = RetrieveInput($"{propertyInfo.Name}: ", s => ValidateProperty(s, propertyInfo, converter));
         }
     }
 
@@ -137,34 +143,31 @@ public partial class Program {
         return output;
     }
 
-    public static Result<object> ValidateProperty(string? input, PropertyInfo propertyInfo,
-        ITypeConversionService converter) {
+    public static Result<object> ValidateProperty(string? input, PropertyInfo propertyInfo, ITypeConversionService converter) {
         if (string.IsNullOrEmpty(input)) {
             var error = new ValidationException("Error: null or empty input");
             return new Result<object>(error);
         }
 
-        if (!converter.TryConvert(input, propertyInfo, out var convertedValue)) {
-            var error = new ValidationException($"Failed to convert input to {propertyInfo.PropertyType.Name}.");
-            return new Result<object>(error);
-        }
-        
-        
+        var conversionResult = converter.TryConvert(input, propertyInfo);
 
-        var validationAttributes = propertyInfo.GetCustomAttributes<ValidationAttribute>(true);
+        return conversionResult.Match(
+            Succ: convertedValue => {
+                var validationAttributes = propertyInfo.GetCustomAttributes<ValidationAttribute>(true);
+                foreach (var attribute in validationAttributes) {
+                    if (!attribute.IsValid(convertedValue)) {
+                        var error = new ValidationException(attribute.ErrorMessage);
+                        return new Result<object>(error);
+                    }
+                }
 
-
-        foreach (var attribute in validationAttributes) {
-            if (!attribute.IsValid(convertedValue)) {
-                var error = new ValidationException(attribute.ErrorMessage);
-                return new Result<object>(error);
-            }
-        }
-
-        return new Result<object>(convertedValue);
+                return new Result<object>(convertedValue);
+            },
+            Fail: e => new Result<object>(e)
+        );
     }
 
-    
+
     public static Result<int> ValidateNumberBounded(string? input, int min, int max) {
         var normalNumberValidationResult = ValidateNumber(input);
 
@@ -204,38 +207,69 @@ public partial class Program {
 }
 
 public interface ITypeConversionService {
-    bool TryConvert(string input, PropertyInfo property, out object? result);
+    Result<object> TryConvert(string input, PropertyInfo property);
 }
 
 public class TypeConversionService : ITypeConversionService {
     private readonly Dictionary<Type, Func<string, object?>> _converters;
 
+
     public TypeConversionService() {
         _converters = new Dictionary<Type, Func<string, object?>> {
             {typeof(int), s => int.TryParse(s, out int i) ? i : null},
             {typeof(double), s => double.TryParse(s, out double d) ? d : null},
-            {typeof(VehicleColor), s => Enum.TryParse(s, out VehicleColor vc) ? vc : null}
+            {typeof(VehicleColor), s => Enum.TryParse(s, true, out VehicleColor vc) ? vc : null},
+            {typeof(string), s => s},
         };
     }
 
-    
-    
-    
-    public bool TryConvert(string input, PropertyInfo property, out object? result) {
-        result = null;
 
-        
-        if (_converters.TryGetValue(property.PropertyType, out var converter)) {
-            var convertedValue = converter(input);
-            if (convertedValue != null) {
-                result = convertedValue;
-                return true;
-            }
+    public Result<object> TryConvert(string input, PropertyInfo property) {
+        if (!_converters.TryGetValue(property.PropertyType, out var converter)) {
+            var error = new ValidationException($"No converter available for type: {property.PropertyType.Name}.");
+            return new Result<object>(error);
         }
 
-        return false;
+        var convertedValue = converter(input);
+
+        if (convertedValue is null) {
+            var error = new ValidationException($"Conversion failed for input: {input}.");
+            return new Result<object>(error);
+        }
+
+        return new Result<object>(convertedValue);
     }
 }
+
+
+
+// var parseResult = Enum.TryParse(s, true, out VehicleColor vc);
+// Console.WriteLine($"parseresult was {parseResult} for {s} av vc was {vc}");
+// if (!parseResult) return null;
+// return parseResult;
+// return Enum.TryParse(s, true, out VehicleColor vc) ? vc : null;   
+// }
+// },
+
+
+// if (!converter.TryConvert(input, propertyInfo, out var convertedValue)) {
+//     var error = new ValidationException($"Failed to convert input to {propertyInfo.PropertyType.Name}.");
+//     return new Result<object>(error);
+// }
+//
+//
+// var validationAttributes = propertyInfo.GetCustomAttributes<ValidationAttribute>(true);
+//
+//
+// foreach (var attribute in validationAttributes) {
+//     if (!attribute.IsValid(convertedValue)) {
+//         var error = new ValidationException(attribute.ErrorMessage);
+//         return new Result<object>(error);
+//     }
+// }
+//
+// return new Result<object>(convertedValue);
+
 
 //
 //
