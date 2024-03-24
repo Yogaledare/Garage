@@ -39,26 +39,26 @@ public partial class Program {
             Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
         }
 
-
         var numTypes = vehicleTypes.Count;
         var index = RetrieveInput("", i => ValidateNumberBounded(i, 0, numTypes - 1));
 
-        var vehicle = vehicleTypes[index];
-        Console.WriteLine(vehicle.Name);
+        var vehicleType = vehicleTypes[index];
+        var vehicleInstance = Activator.CreateInstance(vehicleType);
 
-        foreach (var propertyInfo in vehicle.GetProperties()) {
-            var propertyAttributes = propertyInfo.GetCustomAttributes<ValidationAttribute>();
-
-            foreach (var propertyAttribute in propertyAttributes) {
-                Console.WriteLine(propertyAttribute);
-                Console.WriteLine(propertyAttribute.ErrorMessage);
-                Console.WriteLine();
-            }
-        }
-
-        foreach (var propertyInfo in vehicle.GetProperties()) {
-            // error here: 
+        foreach (var propertyInfo in vehicleType.GetProperties()) {
             var entry = RetrieveInput($"{propertyInfo.Name}: ", s => ValidateProperty(s, propertyInfo, converter));
+            propertyInfo.SetValue(vehicleInstance, entry);
+        }
+        
+        // Print the created object's details
+        if (vehicleInstance != null)
+        {
+            Console.WriteLine("Created Vehicle Details:");
+            Console.WriteLine(vehicleInstance.ToString());
+        }
+        else
+        {
+            Console.WriteLine("Failed to create vehicle instance.");
         }
     }
 
@@ -66,7 +66,7 @@ public partial class Program {
     public abstract class Vehicle : IVehicle {
         [Required]
         [RegularExpression("^[A-Z]{3}[0-9]{3}$", ErrorMessage = "Licence plate must have the format ABC123")]
-        public string? LicencePlate { get; set; }
+        public string? LicencePlate { get; set;  }
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Number of wheels must be at least 1.")]
@@ -77,12 +77,23 @@ public partial class Program {
 
         [Required]
         public double TopSpeed { get; set; }
+        
+        public override string ToString()
+        {
+            return $"LicencePlate={LicencePlate}, NumWheels={NumWheels}, Color={Color}, TopSpeed={TopSpeed}";
+        }
     }
 
 
     public class Car : Vehicle {
+        [Required]
         [Range(1, 5, ErrorMessage = "Number of doors must be within [1, 5]")]
-        public int NumDoors { get; init; }
+        public int NumDoors { get; set; }
+        
+        public override string ToString()
+        {
+            return base.ToString() +  $", NumDoors={NumDoors}";
+        }
     }
 
 
@@ -92,6 +103,7 @@ public partial class Program {
         void CreateGarage(int capacity);
     }
 
+    
     public class GarageHandler<T>(ILicensePlateRegistry licensePlateRegistry) : IGarageHandler<T> where T : IVehicle {
         private List<Garage<T>> _garages = [];
 
@@ -241,6 +253,18 @@ public class TypeConversionService : ITypeConversionService {
     }
 }
 
+
+// Console.WriteLine(vehicle.Name);
+
+// foreach (var propertyInfo in vehicle.GetProperties()) {
+//     var propertyAttributes = propertyInfo.GetCustomAttributes<ValidationAttribute>();
+//
+//     foreach (var propertyAttribute in propertyAttributes) {
+//         Console.WriteLine(propertyAttribute);
+//         Console.WriteLine(propertyAttribute.ErrorMessage);
+//         Console.WriteLine();
+//     }
+// }
 
 
 // var parseResult = Enum.TryParse(s, true, out VehicleColor vc);
