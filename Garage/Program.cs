@@ -1,8 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Reflection;
+﻿using Garage.Entity;
+using Garage.Services;
 using Garage.Validation;
 using LanguageExt;
-using LanguageExt.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -15,242 +14,26 @@ public partial class Program {
                 // services.AddSingleton<ILicensePlateRegistry, LicensePlateRegistry>();
                 services.AddSingleton<IGarageHandler<IVehicle>, GarageHandler<IVehicle>>();
                 services.AddSingleton<ITypeConversionService, TypeConversionService>();
+                services.AddSingleton<IUI, UI>();
+                
+                
             })
             .UseConsoleLifetime()
             .Build();
 
 
-        AddVehicle(host.Services.GetService<ITypeConversionService>());
+        var ui = host.Services.GetService<IUI>();
+        
+        ui.MainMenu();
+        
+
+        // UI.AddVehicle(host.Services.GetService<ITypeConversionService>());
 
         // RetrieveInteger(0, 5); 
     }
 
 
-    private static void AddVehicle(ITypeConversionService converter) {
-        // var i = RetrieveInput("hello", i => ValidateNumberBounded(i, 0, 5));
-        // Console.WriteLine(i);
 
-        var vehicleTypes = Assembly.GetExecutingAssembly()
-            .GetTypes()
-            .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-            .ToList();
-
-        for (var i = 0; i < vehicleTypes.Count; i++) {
-            Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
-        }
-
-        var numTypes = vehicleTypes.Count;
-        var index = RetrieveInput("", i => ValidateNumberBounded(i, 0, numTypes - 1));
-
-        var vehicleType = vehicleTypes[index];
-        var vehicleInstance = Activator.CreateInstance(vehicleType);
-
-        foreach (var propertyInfo in vehicleType.GetProperties()) {
-            var entry = RetrieveInput($"{propertyInfo.Name}: ", s => ValidateProperty(s, propertyInfo, converter));
-            propertyInfo.SetValue(vehicleInstance, entry);
-        }
-        
-        // Print the created object's details
-        if (vehicleInstance != null)
-        {
-            Console.WriteLine("Created Vehicle Details:");
-            Console.WriteLine(vehicleInstance.ToString());
-        }
-        else
-        {
-            Console.WriteLine("Failed to create vehicle instance.");
-        }
-    }
-
-
-    public abstract class Vehicle : IVehicle {
-        [Required]
-        [RegularExpression("^[A-Z]{3}[0-9]{3}$", ErrorMessage = "Licence plate must have the format ABC123")]
-        public string? LicencePlate { get; set;  }
-
-        [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "Number of wheels must be at least 1.")]
-        public int NumWheels { get; set; }
-
-        [Required]
-        public VehicleColor Color { get; set; }
-
-        [Required]
-        public double TopSpeed { get; set; }
-        
-        public override string ToString()
-        {
-            return $"LicencePlate={LicencePlate}, NumWheels={NumWheels}, Color={Color}, TopSpeed={TopSpeed}";
-        }
-    }
-
-
-    public class Car : Vehicle {
-        [Required]
-        [Range(1, 5, ErrorMessage = "Number of doors must be within [1, 5]")]
-        public int NumDoors { get; set; }
-        
-        public override string ToString()
-        {
-            return base.ToString() +  $", NumDoors={NumDoors}";
-        }
-    }
-
-
-    public interface IGarageHandler<T> where T : IVehicle {
-        bool AddVehicle(T vehicle, Garage<T> garage);
-        bool DoesLicencePlateExist(string? licencePlate);
-        void CreateGarage(int capacity);
-    }
-
-    
-    public class GarageHandler<T>(ILicensePlateRegistry licensePlateRegistry) : IGarageHandler<T> where T : IVehicle {
-        private List<Garage<T>> _garages = [];
-
-        public bool AddVehicle(T vehicle, Garage<T> garage) {
-            if (DoesLicencePlateExist(vehicle.LicencePlate)) return false;
-
-            if (garage.IsFull) return false;
-
-            garage.Add(vehicle);
-            return true;
-        }
-
-        public bool DoesLicencePlateExist(string? licencePlate) {
-            return _garages.SelectMany(garage => garage)
-                .Any(vehicle => string.Equals(vehicle.LicencePlate, licencePlate, StringComparison.OrdinalIgnoreCase));
-        }
-
-        public void CreateGarage(int capacity) {
-            _garages.Add(new Garage<T>(capacity));
-        }
-    }
-
-
-    public static T RetrieveInput<T>(string prompt, Func<string?, Result<T>> validator) {
-        T? output = default;
-
-        while (true) {
-            Console.Write(prompt);
-            var input = Console.ReadLine();
-            var result = validator(input);
-
-            bool shouldBreak = result.Match(
-                Succ: validatedSentence => {
-                    output = validatedSentence;
-                    return true;
-                },
-                Fail: ex => {
-                    Console.WriteLine(ex.Message);
-                    return false;
-                }
-            );
-
-            if (shouldBreak) {
-                break;
-            }
-        }
-
-        if (output == null) throw new InvalidOperationException("Parsing failed");
-        return output;
-    }
-
-    public static Result<object> ValidateProperty(string? input, PropertyInfo propertyInfo, ITypeConversionService converter) {
-        if (string.IsNullOrEmpty(input)) {
-            var error = new ValidationException("Error: null or empty input");
-            return new Result<object>(error);
-        }
-
-        var conversionResult = converter.TryConvert(input, propertyInfo);
-
-        return conversionResult.Match(
-            Succ: convertedValue => {
-                var validationAttributes = propertyInfo.GetCustomAttributes<ValidationAttribute>(true);
-                foreach (var attribute in validationAttributes) {
-                    if (!attribute.IsValid(convertedValue)) {
-                        var error = new ValidationException(attribute.ErrorMessage);
-                        return new Result<object>(error);
-                    }
-                }
-
-                return new Result<object>(convertedValue);
-            },
-            Fail: e => new Result<object>(e)
-        );
-    }
-
-
-    public static Result<int> ValidateNumberBounded(string? input, int min, int max) {
-        var normalNumberValidationResult = ValidateNumber(input);
-
-        return normalNumberValidationResult.Match(
-            Succ: number => {
-                if (number < min || number > max) {
-                    var error = new ValidationException($"Must be within [{min}, {max}] (inclusive)");
-                    return new Result<int>(error);
-                }
-
-                return number;
-            },
-            Fail: _ => normalNumberValidationResult);
-    }
-
-
-    public static Result<int> ValidateNumber(string? input) {
-        if (string.IsNullOrEmpty(input)) {
-            var error = new ValidationException("Error: null or empty input");
-            return new Result<int>(error);
-        }
-
-        var tokens = input.Split(' ');
-
-        if (tokens.Length > 1) {
-            var error = new ValidationException("Error: too many inputs");
-            return new Result<int>(error);
-        }
-
-        if (!int.TryParse(tokens[0], out int number)) {
-            var error = new ValidationException("Error: cannot parse integer");
-            return new Result<int>(error);
-        }
-
-        return number;
-    }
-}
-
-public interface ITypeConversionService {
-    Result<object> TryConvert(string input, PropertyInfo property);
-}
-
-public class TypeConversionService : ITypeConversionService {
-    private readonly Dictionary<Type, Func<string, object?>> _converters;
-
-
-    public TypeConversionService() {
-        _converters = new Dictionary<Type, Func<string, object?>> {
-            {typeof(int), s => int.TryParse(s, out int i) ? i : null},
-            {typeof(double), s => double.TryParse(s, out double d) ? d : null},
-            {typeof(VehicleColor), s => Enum.TryParse(s, true, out VehicleColor vc) ? vc : null},
-            {typeof(string), s => s},
-        };
-    }
-
-
-    public Result<object> TryConvert(string input, PropertyInfo property) {
-        if (!_converters.TryGetValue(property.PropertyType, out var converter)) {
-            var error = new ValidationException($"No converter available for type: {property.PropertyType.Name}.");
-            return new Result<object>(error);
-        }
-
-        var convertedValue = converter(input);
-
-        if (convertedValue is null) {
-            var error = new ValidationException($"Conversion failed for input: {input}.");
-            return new Result<object>(error);
-        }
-
-        return new Result<object>(convertedValue);
-    }
 }
 
 

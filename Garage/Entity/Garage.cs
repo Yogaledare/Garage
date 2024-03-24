@@ -1,17 +1,22 @@
 using System.Collections;
+using System.Text;
 
-namespace Garage;
+namespace Garage.Entity;
 
 public class Garage<T> : IEnumerable<T> where T : IVehicle {
     private T?[] _items;
 
-    private int _numItems = 0;
+    public int Capacity { get; }
+    public int NumItems { get; private set; } = 0;
 
-    public bool IsFull => _numItems >= _items.Length;
+    public bool IsFull => NumItems >= _items.Length;
 
-    
+
+
+
     public Garage(int capacity) {
         _items = new T?[capacity];
+        Capacity = capacity; 
     }
 
 
@@ -27,6 +32,7 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
         }
 
         _items[index] = input;
+        NumItems++; 
         return true;
     }
 
@@ -39,8 +45,25 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
         }
 
         _items[index] = default;
-
+        NumItems--; 
         return true;
+    }
+
+
+    public override string ToString() {
+        var output = new StringBuilder(); 
+        
+        output.AppendLine($"Garage with capacity = {Capacity}, #stored = {NumItems}:");
+
+        var itemsNotNull = _items.Where(item => item is not null); 
+        
+        foreach (var item in itemsNotNull) {
+            output.Append("    ");  
+            output.AppendLine(item.ToString()); 
+        }
+
+        output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length); 
+        return output.ToString(); 
     }
 
 

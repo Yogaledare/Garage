@@ -1,4 +1,6 @@
-﻿namespace Garage.Validation;
+﻿using Garage.Entity;
+
+namespace Garage.Validation;
 
 using FluentValidation;
 
@@ -11,7 +13,7 @@ public class LicensePlateValidator : AbstractValidator<string> {
     }
 }
 
-public class VehicleValidator : AbstractValidator<Program.Vehicle> {
+public class VehicleValidator : AbstractValidator<Vehicle> {
     public VehicleValidator() {
         RuleFor(v => v.LicencePlate)
             .NotNull()
