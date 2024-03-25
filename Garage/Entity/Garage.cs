@@ -65,14 +65,14 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
         
         foreach (var item in itemsNotNull) {
             output.Append("    ");  
-            output.AppendLine(item.ToString());
+            output.AppendLine(item?.ToString());
         }
 
-        if (output.Length > 0 && output.ToString().EndsWith(Environment.NewLine)) {
-            output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length);
-        }
+        // if (output.Length > 0 && output.ToString().EndsWith(Environment.NewLine)) {
+            // output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+        // }
 
-        return output.ToString();
+        return output.ToString().TrimEnd();
     }
 
 

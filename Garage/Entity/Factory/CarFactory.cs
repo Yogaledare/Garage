@@ -6,6 +6,8 @@ using Garage.Services.UI;
 namespace Garage.Entity.Factory;
 
 public class CarFactory(IGarageHandler<IVehicle> garageHandler) : VehicleFactory(garageHandler) {
+    public override Type ProducedVehicleType => typeof(Car);
+
     protected override IVehicle CreateSpecificVehicle() {
         var car = new Car {
             NumDoors = InputRetriever.RetrieveInput(

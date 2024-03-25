@@ -1,4 +1,5 @@
-﻿using Garage.Entity.Vehicles;
+﻿using FluentValidation;
+using Garage.Entity.Vehicles;
 using Garage.Services.GarageHandler;
 using Garage.Services.Input;
 using Garage.Services.UI;
@@ -11,6 +12,9 @@ public abstract class VehicleFactory(IGarageHandler<IVehicle> garageHandler) : I
         SetCommonProperties(vehicle);
         return vehicle;
     }
+
+    public abstract Type ProducedVehicleType { get; }
+
 
     protected abstract IVehicle CreateSpecificVehicle();
 

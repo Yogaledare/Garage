@@ -2,6 +2,7 @@
 using System.Text;
 using Garage.Entity;
 using Garage.Entity.Factory;
+using Garage.Entity.Factory.FactoryProvider;
 using Garage.Entity.Vehicles;
 using Garage.Services.Conversion;
 using Garage.Services.GarageHandler;
@@ -13,34 +14,31 @@ namespace Garage.Services.UI;
 
 public class UI : IUI {
     private readonly IGarageHandler<IVehicle> _garageHandler;
-    private List<(string Description, Action Method)> _menuOptions;
-    private List<(string, IVehicleFactory)> _vehicleFactoryOptions;
+    private readonly IVehicleFactoryProvider _factoryProvider; 
+    private readonly List<(string Description, Action Method)> _menuOptions;
+    
+    // public List<(string, IVehicleFactory)> VehicleFactoryOptions { get; set; }
     public event Action OnExitRequested;
 
 
-    public UI(IGarageHandler<IVehicle> garageHandler) {
+    public UI(IGarageHandler<IVehicle> garageHandler, IVehicleFactoryProvider factoryProvider) {
         _garageHandler = garageHandler;
-        // _converter = converter;
-        InitializeMenuOptions();
-        InitializeTypeOptions();
-    }
-
-
-    private void InitializeTypeOptions() {
-        _vehicleFactoryOptions = [
-            ("Car", new CarFactory(_garageHandler)),
-        ];
-    }
-
-
-    private void InitializeMenuOptions() {
+        _factoryProvider = factoryProvider;
         _menuOptions = [
             ("Add a vehicle", AddVehicle),
             ("Add a garage", AddGarage),
             ("Search for vehicle (by license plate)", SearchForVehicle),
-            ("List garages (and all parked vehicles)", ListGarages),
+            ("List parked vehicles (& garages)", ListParkedVehicles),
+            ("List vehicle types", ListVehicleTypes),
             ("Exit", ExitProgram)
         ];
+    }
+
+    private void ListVehicleTypes() {
+        
+        
+        
+        
     }
 
 
@@ -61,7 +59,7 @@ public class UI : IUI {
     }
 
 
-    private void ListGarages() {
+    private void ListParkedVehicles() {
         var output = _garageHandler.ListContents();
         Console.WriteLine(output);
     }
@@ -77,7 +75,7 @@ public class UI : IUI {
                 var stringBuilder = new StringBuilder();
                 stringBuilder.AppendLine("Found vehicle!");
                 stringBuilder.AppendLine($"Vehicle: {vehicle}");
-                stringBuilder.Append($"Found in a garage with capacity = {garage.Capacity} and #stored = {garage.NumItems} ");
+                stringBuilder.Append($"Found in {garage.ShortDescription()}");
                 return stringBuilder.ToString();
             },
             Fail: exception => exception.Message
@@ -107,7 +105,7 @@ public class UI : IUI {
             return;
         }
 
-        var vehicleFactory = SelectFromMenu(_vehicleFactoryOptions);
+        var vehicleFactory = SelectFromMenu(_factoryProvider.GetAvailableFactories());
         var vehicleInstance = vehicleFactory.CreateVehicle();
         Console.WriteLine("Created Vehicle Details:");
         Console.WriteLine(vehicleInstance.ToString());
@@ -120,6 +118,14 @@ public class UI : IUI {
     }
 }
 
+//
+//
+//
+// private void InitializeMenuOptions() {
+//
+// }
+//
+//
 
 //
 // public IVehicle CreateVehicle() {

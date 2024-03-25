@@ -1,4 +1,6 @@
 ﻿using Garage.Entity;
+using Garage.Entity.Factory;
+using Garage.Entity.Factory.FactoryProvider;
 using Garage.Entity.Vehicles;
 using Garage.Services;
 using Garage.Services.Conversion;
@@ -18,6 +20,15 @@ public partial class Program {
                 // services.AddSingleton<ILicensePlateRegistry, LicensePlateRegistry>();
                 services.AddSingleton<IGarageHandler<IVehicle>, GarageHandler<IVehicle>>();
                 services.AddSingleton<ITypeConversionService, TypeConversionService>();
+                // services.AddSingleton<IVehicleFactory, CarFactory>();
+                services.AddSingleton<IVehicleFactoryProvider>(sp => {
+                    var carFactory = new CarFactory(sp.GetRequiredService<IGarageHandler<IVehicle>>());
+                    return new VehicleFactoryProvider(new List<ValueTuple<string, IVehicleFactory>>
+                    {
+                        ("Car", carFactory),
+                        // ... (add tuples for other factories)
+                    });
+                }); 
                 services.AddSingleton<IUI, UI>();
                 
                 

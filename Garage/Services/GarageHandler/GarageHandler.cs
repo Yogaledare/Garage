@@ -1,11 +1,12 @@
 ﻿using System.Text;
 using Garage.Entity;
 using Garage.Entity.Vehicles;
+using Garage.Services.UI;
 using LanguageExt.Common;
 
 namespace Garage.Services.GarageHandler;
 
-public class GarageHandler<T>() : IGarageHandler<T> where T : IVehicle {
+public class GarageHandler<T>(IUI ui) : IGarageHandler<T> where T : IVehicle {
     public List<Garage<T>> Garages { get; } = [];
 
     public bool AddVehicle(T vehicle, Garage<T> garage) {
@@ -55,6 +56,10 @@ public class GarageHandler<T>() : IGarageHandler<T> where T : IVehicle {
             // }
         }
 
-        return output.ToString();
+        // if (output.Length > 0 && output.ToString().EndsWith(Environment.NewLine)) {
+            // output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+        // }
+        
+        return output.ToString().TrimEnd();
     }
 }

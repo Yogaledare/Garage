@@ -4,4 +4,5 @@ namespace Garage.Entity.Factory;
 
 public interface IVehicleFactory {
     public IVehicle CreateVehicle();
+    Type ProducedVehicleType { get; }
 }
