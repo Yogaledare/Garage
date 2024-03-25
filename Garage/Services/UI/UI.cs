@@ -155,9 +155,9 @@ public class UI : IUI {
     }
 
 
-    private T BuildProperty<T>(PropertyInfo propertyInfo) where T : IVehicle {
-        
-    }
+    // private T BuildProperty<T>(PropertyInfo propertyInfo) where T : IVehicle {
+    //     
+    // }
 }
 
 
