@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Garage.Entity;
+namespace Garage.Entity.Vehicles;
 
 public abstract class Vehicle : IVehicle {
     [Required]

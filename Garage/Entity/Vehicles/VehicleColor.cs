@@ -1,4 +1,4 @@
-namespace Garage.Entity;
+namespace Garage.Entity.Vehicles;
 
 public enum VehicleColor {
     Black,

@@ -1,4 +1,5 @@
 ﻿using Garage.Entity;
+using Garage.Entity.Vehicles;
 using Garage.Services;
 using Garage.Services.Conversion;
 using Garage.Services.GarageHandler;

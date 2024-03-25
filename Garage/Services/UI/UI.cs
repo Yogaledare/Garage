@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using System.Text;
 using Garage.Entity;
+using Garage.Entity.Factory;
+using Garage.Entity.Vehicles;
 using Garage.Services.Conversion;
 using Garage.Services.GarageHandler;
 using Garage.Services.Input;
@@ -11,8 +13,6 @@ namespace Garage.Services.UI;
 
 public class UI : IUI {
     private readonly IGarageHandler<IVehicle> _garageHandler;
-
-    // private readonly ITypeConversionService _converter;
     private List<(string Description, Action Method)> _menuOptions;
     private List<(string, IVehicleFactory)> _vehicleFactoryOptions;
     public event Action OnExitRequested;
@@ -88,7 +88,7 @@ public class UI : IUI {
 
 
     private void AddGarage() {
-        var capacity = InputRetriever.RetrieveInput("Capacity: ", ValidateNumber);
+        var capacity = RetrieveInput("Capacity: ", ValidateNumber);
 
         _garageHandler.CreateGarage(capacity);
         Console.WriteLine($"New garage with {capacity} created. Garages: ");
@@ -117,36 +117,6 @@ public class UI : IUI {
 
         _garageHandler.AddVehicle(vehicleInstance, garageSelected);
         Console.WriteLine($"Added {vehicleInstance.GetType().Name} to {garageSelected.ShortDescription()}");
-    }
-}
-
-public interface IVehicleFactory {
-    public IVehicle CreateVehicle();
-}
-
-public abstract class VehicleFactory(IGarageHandler<IVehicle> garageHandler) : IVehicleFactory {
-    public IVehicle CreateVehicle() {
-        var vehicle = CreateSpecificVehicle();
-        SetCommonProperties(vehicle);
-        return vehicle;
-    }
-
-    protected abstract IVehicle CreateSpecificVehicle();
-
-    private void SetCommonProperties(IVehicle vehicle) {
-        vehicle.LicencePlate = RetrieveInput("LicensePlate: ", s => ValidateLicensePlate(s, garageHandler));
-        vehicle.NumWheels = RetrieveInput("numWheels: ", s => ValidateNumberBounded(s, 0, 4));
-        vehicle.Color = SelectFromEnum<VehicleColor>();
-        vehicle.TopSpeed = RetrieveInput("TopSpeed: ", s => ValidateDoubleBounded(s, 0, 450));
-    }
-}
-
-public class CarFactory(IGarageHandler<IVehicle> garageHandler) : VehicleFactory(garageHandler) {
-    protected override IVehicle CreateSpecificVehicle() {
-        var car = new Car {
-            NumDoors = RetrieveInput("NumDoors: ", s => ValidateNumberBounded(s, 0, 5))
-        };
-        return car;
     }
 }
 

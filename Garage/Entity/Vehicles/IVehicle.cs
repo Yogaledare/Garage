@@ -1,4 +1,4 @@
-namespace Garage.Entity;
+namespace Garage.Entity.Vehicles;
 
 public interface IVehicle {
     public string? LicencePlate { get; set; }

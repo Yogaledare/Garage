@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Garage.Entity;
+using Garage.Entity.Vehicles;
 using Garage.Services.Conversion;
 using Garage.Services.GarageHandler;
 using LanguageExt.Common;

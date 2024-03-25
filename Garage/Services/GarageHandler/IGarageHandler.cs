@@ -1,4 +1,5 @@
 ﻿using Garage.Entity;
+using Garage.Entity.Vehicles;
 using LanguageExt.Common;
 
 namespace Garage.Services.GarageHandler;

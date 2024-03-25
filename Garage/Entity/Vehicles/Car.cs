@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Garage.Entity;
+namespace Garage.Entity.Vehicles;
 
 public class Car : Vehicle {
     [Required]
