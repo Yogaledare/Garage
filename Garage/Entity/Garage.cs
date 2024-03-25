@@ -19,7 +19,7 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
         Capacity = capacity; 
     }
 
-
+    
     public bool Add(T input) {
         if (IsFull) {
             return false;
@@ -50,20 +50,28 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
     }
 
 
+    public string ShortDescription() {
+        return $"Garage with capacity = {Capacity}, #stored = {NumItems}"; 
+    }
+
+
     public override string ToString() {
         var output = new StringBuilder(); 
         
-        output.AppendLine($"Garage with capacity = {Capacity}, #stored = {NumItems}:");
+        output.AppendLine(ShortDescription());
 
         var itemsNotNull = _items.Where(item => item is not null); 
         
         foreach (var item in itemsNotNull) {
             output.Append("    ");  
-            output.AppendLine(item.ToString()); 
+            output.AppendLine(item.ToString());
         }
 
-        output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length); 
-        return output.ToString(); 
+        if (output.Length > 0 && output.ToString().EndsWith(Environment.NewLine)) {
+            output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+        }
+
+        return output.ToString();
     }
 
 

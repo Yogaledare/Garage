@@ -5,4 +5,5 @@ public interface IVehicle {
     int NumWheels { get; }
     VehicleColor Color { get; }
     double TopSpeed { get; }
+    string ToString(); 
 }

@@ -1,6 +1,7 @@
 ﻿using Garage.Entity;
+using LanguageExt.Common;
 
-namespace Garage.Services;
+namespace Garage.Services.GarageHandler;
 
 public interface IGarageHandler<T> where T : IVehicle {
     List<Garage<T>> Garages { get; }
@@ -8,4 +9,5 @@ public interface IGarageHandler<T> where T : IVehicle {
     bool DoesLicencePlateExist(string? licencePlate);
     void CreateGarage(int capacity);
     public string ListContents();
+    Result<(Garage<T>, T)> FindVehicle(string licencePlate);
 }

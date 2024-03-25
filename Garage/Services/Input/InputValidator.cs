@@ -1,40 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Garage.Entity;
+using Garage.Services.Conversion;
+using Garage.Services.GarageHandler;
 using LanguageExt.Common;
 
-namespace Garage.Services;
+namespace Garage.Services.Input;
 
 public static class InputValidator {
-    public static T RetrieveInput<T>(string prompt, Func<string?, Result<T>> validator) {
-        T? output = default;
-
-        while (true) {
-            Console.Write(prompt);
-            var input = Console.ReadLine();
-            var result = validator(input);
-
-            bool shouldBreak = result.Match(
-                Succ: validatedSentence => {
-                    output = validatedSentence;
-                    return true;
-                },
-                Fail: ex => {
-                    Console.WriteLine(ex.Message);
-                    return false;
-                }
-            );
-
-            if (shouldBreak) {
-                break;
-            }
-        }
-
-        if (output == null) throw new InvalidOperationException("Parsing failed");
-        return output;
-    }
-
-
     public static Result<object> ValidateProperty(string? input, PropertyInfo propertyInfo, ITypeConversionService converter,
         IGarageHandler<IVehicle> garageHandler) {
         if (string.IsNullOrEmpty(input)) {
@@ -66,6 +40,23 @@ public static class InputValidator {
             },
             Fail: e => new Result<object>(e)
         );
+    }
+
+
+    public static Result<string> ValidateLicensePlateSearch(string? input) {
+        if (string.IsNullOrEmpty(input)) {
+            var error = new ValidationException("Error: null or empty input");
+            return new Result<string>(error);
+        }
+
+        // code duplication from vehicle entity...
+        var pattern = "^[A-Za-z]{3}[0-9]{3}$";
+        if (!Regex.IsMatch(input, pattern)) {
+            var error = new ValidationException("License plate must be three capital letters followed by three digits.");
+            return new Result<string>(error);
+        }
+
+        return input;
     }
 
 

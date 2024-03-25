@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using Garage.Entity;
 using LanguageExt.Common;
 
-namespace Garage.Services;
+namespace Garage.Services.Conversion;
 
 public class TypeConversionService : ITypeConversionService {
     private readonly Dictionary<Type, Func<string, object?>> _converters;
