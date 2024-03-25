@@ -21,4 +21,8 @@ public abstract class Vehicle : IVehicle {
     {
         return $"LicencePlate={LicencePlate}, NumWheels={NumWheels}, Color={Color}, TopSpeed={TopSpeed}";
     }
+
+    // public IVehicle CreateVehicle() {
+        
+    // }
 }

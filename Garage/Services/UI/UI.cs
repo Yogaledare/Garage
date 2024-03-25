@@ -11,15 +11,25 @@ namespace Garage.Services.UI;
 
 public class UI : IUI {
     private readonly IGarageHandler<IVehicle> _garageHandler;
-    private readonly ITypeConversionService _converter;
+
+    // private readonly ITypeConversionService _converter;
     private List<(string Description, Action Method)> _menuOptions;
+    private List<(string, IVehicleFactory)> _vehicleFactoryOptions;
     public event Action OnExitRequested;
 
 
-    public UI(IGarageHandler<IVehicle> garageHandler, ITypeConversionService converter) {
+    public UI(IGarageHandler<IVehicle> garageHandler) {
         _garageHandler = garageHandler;
-        _converter = converter;
+        // _converter = converter;
         InitializeMenuOptions();
+        InitializeTypeOptions();
+    }
+
+
+    private void InitializeTypeOptions() {
+        _vehicleFactoryOptions = [
+            ("Car", new CarFactory(_garageHandler)),
+        ];
     }
 
 
@@ -58,7 +68,7 @@ public class UI : IUI {
 
     private void SearchForVehicle() {
         Console.WriteLine("Enter licence plate to search for (format 'ABC123', non-case sensitive)");
-        var input = InputRetriever.RetrieveInput("Plate number: ", ValidateLicensePlateSearch);
+        var input = RetrieveInput("Plate number: ", ValidateLicensePlateSearch);
         var result = _garageHandler.FindVehicle(input);
 
         var output = result.Match(
@@ -97,7 +107,8 @@ public class UI : IUI {
             return;
         }
 
-        var vehicleInstance = CreateVehicle();
+        var vehicleFactory = SelectFromMenu(_vehicleFactoryOptions);
+        var vehicleInstance = vehicleFactory.CreateVehicle();
         Console.WriteLine("Created Vehicle Details:");
         Console.WriteLine(vehicleInstance.ToString());
 
@@ -107,62 +118,83 @@ public class UI : IUI {
         _garageHandler.AddVehicle(vehicleInstance, garageSelected);
         Console.WriteLine($"Added {vehicleInstance.GetType().Name} to {garageSelected.ShortDescription()}");
     }
+}
 
+public interface IVehicleFactory {
+    public IVehicle CreateVehicle();
+}
 
+public abstract class VehicleFactory(IGarageHandler<IVehicle> garageHandler) : IVehicleFactory {
     public IVehicle CreateVehicle() {
-        var vehicleType = ChooseVehicleType();
-        return BuildVehicleInstance(vehicleType);
+        var vehicle = CreateSpecificVehicle();
+        SetCommonProperties(vehicle);
+        return vehicle;
     }
 
+    protected abstract IVehicle CreateSpecificVehicle();
 
-    private static Type ChooseVehicleType() {
-        var vehicleTypes = Assembly.GetExecutingAssembly()
-            .GetTypes()
-            .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-            .ToList();
-
-        if (vehicleTypes.Count == 0) {
-            throw new InvalidOperationException("No vehicle classes available!");
-        }
-
-        var vehicleTypesDescribed = vehicleTypes.Select(t => (t.Name, t));
-        var vehicleType = SelectFromMenu(vehicleTypesDescribed); 
-
-        return vehicleType;
+    private void SetCommonProperties(IVehicle vehicle) {
+        vehicle.LicencePlate = RetrieveInput("LicensePlate: ", s => ValidateLicensePlate(s, garageHandler));
+        vehicle.NumWheels = RetrieveInput("numWheels: ", s => ValidateNumberBounded(s, 0, 4));
+        vehicle.Color = SelectFromEnum<VehicleColor>();
+        vehicle.TopSpeed = RetrieveInput("TopSpeed: ", s => ValidateDoubleBounded(s, 0, 450));
     }
+}
 
-
-    private IVehicle BuildVehicleInstance(Type vehicleType) {
-        var vehicleObject = Activator.CreateInstance(vehicleType);
-
-        if (vehicleObject is not IVehicle vehicleInstance) {
-            throw new InvalidOperationException($"The created instance is not an IVehicle: {vehicleType.Name}");
-        }
-
-        foreach (var propertyInfo in vehicleType.GetProperties()) {
-            
-            
-            
-            
-            
-            var entry = RetrieveInput(
-                $"{propertyInfo.Name}: ",
-                s => ValidateProperty(s, propertyInfo, _converter, _garageHandler));
-            propertyInfo.SetValue(vehicleInstance, entry);
-        }
-
-        return vehicleInstance;
+public class CarFactory(IGarageHandler<IVehicle> garageHandler) : VehicleFactory(garageHandler) {
+    protected override IVehicle CreateSpecificVehicle() {
+        var car = new Car {
+            NumDoors = RetrieveInput("NumDoors: ", s => ValidateNumberBounded(s, 0, 5))
+        };
+        return car;
     }
-
-
-    // private T BuildProperty<T>(PropertyInfo propertyInfo) where T : IVehicle {
-    //     
-    // }
 }
 
 
+//
+// public IVehicle CreateVehicle() {
+//     var vehicleFactory = SelectFromMenu(_vehicleFactoryOptions);
+//     return vehicleFactory.CreateVehicle();
+// }
 
-        
+
+//
+// private static Type ChooseVehicleType() {
+//     var vehicleTypes = Assembly.GetExecutingAssembly()
+//         .GetTypes()
+//         .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+//         .ToList();
+//
+//     if (vehicleTypes.Count == 0) {
+//         throw new InvalidOperationException("No vehicle classes available!");
+//     }
+//
+//     var vehicleTypesDescribed = vehicleTypes.Select(t => (t.Name, t));
+//     var vehicleType = SelectFromMenu(vehicleTypesDescribed);
+//
+//     return vehicleType;
+// }
+//
+//
+// private IVehicle BuildVehicleInstance(Type vehicleType) {
+//     var vehicleObject = Activator.CreateInstance(vehicleType);
+//
+//     if (vehicleObject is not IVehicle vehicleInstance) {
+//         throw new InvalidOperationException($"The created instance is not an IVehicle: {vehicleType.Name}");
+//     }
+//
+//     foreach (var propertyInfo in vehicleType.GetProperties()) {
+//         var entry = RetrieveInput(
+//             $"{propertyInfo.Name}: ",
+//             s => ValidateProperty(s, propertyInfo, _converter, _garageHandler));
+//         propertyInfo.SetValue(vehicleInstance, entry);
+//     }
+//
+//     return vehicleInstance;
+// }
+//
+
+
 // Console.WriteLine("Choose a vehicle");
 
 // for (var i = 0; i < vehicleTypes.Count; i++) {

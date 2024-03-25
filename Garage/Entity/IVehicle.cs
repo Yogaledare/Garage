@@ -1,9 +1,10 @@
 namespace Garage.Entity;
 
 public interface IVehicle {
-    public string? LicencePlate { get; }
-    int NumWheels { get; }
-    VehicleColor Color { get; }
-    double TopSpeed { get; }
-    string ToString(); 
+    public string? LicencePlate { get; set; }
+    int NumWheels { get; set; }
+    VehicleColor Color { get; set; }
+    double TopSpeed { get; set; }
+    string ToString();
+    // public IVehicle CreateVehicle();
 }
