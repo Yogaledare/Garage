@@ -6,5 +6,4 @@ public interface IVehicle {
     VehicleColor? Color { get; set; }
     int? TopSpeed { get; set; }
     string ToString();
-    // public IVehicle CreateVehicle();
 }

@@ -1,7 +1,6 @@
 ﻿using Garage.Entity.Vehicles;
 using Garage.Services.GarageHandler;
 using Garage.Services.Input;
-using Garage.Services.UI;
 
 namespace Garage.Entity.Factory;
 
