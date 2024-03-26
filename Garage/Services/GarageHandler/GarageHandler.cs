@@ -6,7 +6,14 @@ using LanguageExt.Common;
 
 namespace Garage.Services.GarageHandler;
 
-public class GarageHandler<T>(IUI ui) : IGarageHandler<T> where T : IVehicle {
+public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
+    // // private readonly IUI _ui; 
+    // private readonly IVehicleFactoryProvider _factoryProvider;
+    //
+    // public GarageHandler(IVehicleFactoryProvider factoryProvider) {
+    //     _factoryProvider = factoryProvider;
+    // }
+
     public List<Garage<T>> Garages { get; } = [];
 
     public bool AddVehicle(T vehicle, Garage<T> garage) {
@@ -16,6 +23,19 @@ public class GarageHandler<T>(IUI ui) : IGarageHandler<T> where T : IVehicle {
 
         garage.Add(vehicle);
         return true;
+    }
+
+    public bool RemoveVehicle(string licensePlate) {
+        var searchResult = FindVehicle(licensePlate);
+
+        return searchResult.Match(
+            Succ: tuple => {
+                var (g, v) = tuple;
+                g.Remove(v);
+                return true;
+            },
+            Fail: ex => false
+        ); 
     }
 
     public bool DoesLicencePlateExist(string? licencePlate) {
@@ -41,6 +61,19 @@ public class GarageHandler<T>(IUI ui) : IGarageHandler<T> where T : IVehicle {
         return new Result<(Garage<T>, T)>(error);
     }
 
+    public Dictionary<Type, int> CountVehicleTypes(HashSet<Type> types) {
+        var output = new Dictionary<Type, int>();
+    
+        foreach (var type in types) {
+            // var type = factory.ProducedVehicleType;
+            var count = Garages.SelectMany(g => g)
+                .Count(v => v.GetType() == type);
+            output[type] = count; 
+        }
+    
+        return output; 
+    }
+
 
     public string ListContents() {
         var output = new StringBuilder();
@@ -63,3 +96,19 @@ public class GarageHandler<T>(IUI ui) : IGarageHandler<T> where T : IVehicle {
         return output.ToString().TrimEnd();
     }
 }
+
+
+
+//
+//
+// foreach (var garage in Garages) {
+//     foreach (var vehicle in garage) {
+//         if (vehicle.LicencePlate != licensePlate) continue;
+//                 
+//         garage.Remove(vehicle);
+//         return true;
+//     }
+// }
+//
+// return false; 
+//

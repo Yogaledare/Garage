@@ -1,4 +1,6 @@
-﻿namespace Garage.Entity.Factory.FactoryProvider;
+﻿using Garage.Entity.Factory;
+
+namespace Garage.Services.FactoryProvider;
 
 public class VehicleFactoryProvider : IVehicleFactoryProvider {
     private readonly IEnumerable<(string, IVehicleFactory)> _factories;

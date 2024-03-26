@@ -1,9 +1,9 @@
 ﻿using Garage.Entity;
 using Garage.Entity.Factory;
-using Garage.Entity.Factory.FactoryProvider;
 using Garage.Entity.Vehicles;
 using Garage.Services;
 using Garage.Services.Conversion;
+using Garage.Services.FactoryProvider;
 using Garage.Services.GarageHandler;
 using Garage.Services.UI;
 using Garage.Validation;
@@ -23,7 +23,7 @@ public partial class Program {
                 // services.AddSingleton<IVehicleFactory, CarFactory>();
                 services.AddSingleton<IVehicleFactoryProvider>(sp => {
                     var carFactory = new CarFactory(sp.GetRequiredService<IGarageHandler<IVehicle>>());
-                    return new VehicleFactoryProvider(new List<ValueTuple<string, IVehicleFactory>>
+                    return new VehicleFactoryProvider(new List<(string, IVehicleFactory)>
                     {
                         ("Car", carFactory),
                         // ... (add tuples for other factories)
@@ -38,7 +38,6 @@ public partial class Program {
 
 
         var ui = host.Services.GetService<IUI>();
-        
         ui.MainMenu();
         
 

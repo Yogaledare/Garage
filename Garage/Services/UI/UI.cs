@@ -2,9 +2,9 @@
 using System.Text;
 using Garage.Entity;
 using Garage.Entity.Factory;
-using Garage.Entity.Factory.FactoryProvider;
 using Garage.Entity.Vehicles;
 using Garage.Services.Conversion;
+using Garage.Services.FactoryProvider;
 using Garage.Services.GarageHandler;
 using Garage.Services.Input;
 using static Garage.Services.Input.InputValidator;
@@ -25,20 +25,52 @@ public class UI : IUI {
         _garageHandler = garageHandler;
         _factoryProvider = factoryProvider;
         _menuOptions = [
-            ("Add a vehicle", AddVehicle),
-            ("Add a garage", AddGarage),
-            ("Search for vehicle (by license plate)", SearchForVehicle),
+            ("Exit", ExitProgram),
+            ("Add garage", AddGarage),
+            ("Add vehicle", AddVehicle),
+            ("Remove vehicle", RemoveVehicle),
+            ("Search for vehicle", SearchForVehicle),
             ("List parked vehicles (& garages)", ListParkedVehicles),
             ("List vehicle types", ListVehicleTypes),
-            ("Exit", ExitProgram)
+            ("Pre-populate garages", PrePopulate),
         ];
     }
 
+    private void PrePopulate() {
+        
+        
+    }
+
+    private void RemoveVehicle() {
+        var licensePlate = RetrieveInput("Licence plate: ", ValidateLicensePlateSearch);
+        var result = _garageHandler.RemoveVehicle(licensePlate);
+        var message = result ? $"Removed vehicle with licence plate {licensePlate}" : "Could not find vehicle";
+        Console.WriteLine(message);
+    }
+
     private void ListVehicleTypes() {
+        HashSet<Type> types = new HashSet<Type>();
+
+        foreach (var (description, factory) in _factoryProvider.GetAvailableFactories()) {
+            types.Add(factory.ProducedVehicleType); 
+        }
         
+        var response = _garageHandler.CountVehicleTypes(types);
+    
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.Append("Vehicle types (#):"); 
         
-        
-        
+        bool isFirst = true;
+        foreach (var (type, count) in response) {
+            if (!isFirst) {
+                stringBuilder.Append(',');
+            }
+    
+            stringBuilder.Append($" {type.Name} ({count}),"); 
+            isFirst = false; 
+        }
+    
+        Console.WriteLine(stringBuilder.ToString());
     }
 
 
@@ -49,6 +81,7 @@ public class UI : IUI {
         while (continueRunning) {
             Console.WriteLine();
             var chosenMethod = SelectFromMenu(_menuOptions);
+            Console.WriteLine();
             chosenMethod.Invoke();
         }
     }
@@ -116,6 +149,9 @@ public class UI : IUI {
         _garageHandler.AddVehicle(vehicleInstance, garageSelected);
         Console.WriteLine($"Added {vehicleInstance.GetType().Name} to {garageSelected.ShortDescription()}");
     }
+    
+    
+
 }
 
 //

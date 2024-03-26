@@ -70,7 +70,6 @@ public class NumericStringValidator : AbstractValidator<string?> {
 }
 
 // public class NumericStringInputValidator : AbstractValidator<Program.NumericStringInput> {
-//     // todo implementation
 // }
 
 public class IntegerInputValidator : AbstractValidator<string> {
