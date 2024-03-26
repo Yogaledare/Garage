@@ -1,22 +1,16 @@
 ﻿using System.Text;
-using FluentValidation;
 using Garage.Entity;
 using Garage.Entity.Vehicles;
-using Garage.Services.UI;
 using LanguageExt.Common;
 
 namespace Garage.Services.GarageHandler;
 
 public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
-    // // private readonly IUI _ui; 
-    // private readonly IVehicleFactoryProvider _factoryProvider;
-    //
-    // public GarageHandler(IVehicleFactoryProvider factoryProvider) {
-    //     _factoryProvider = factoryProvider;
-    // }
 
+    
     public List<Garage<T>> Garages { get; } = [];
 
+    
     public Result<T> AddVehicle(T vehicle, Garage<T> garage) {
         if (DoesLicencePlateExist(vehicle.LicencePlate)) {
             var error = new InvalidOperationException("Licence number already in use");
@@ -62,16 +56,19 @@ public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
         );
     }
 
+    
     public bool DoesLicencePlateExist(string? licencePlate) {
         return Garages
             .SelectMany(garage => garage)
             .Any(vehicle => string.Equals(vehicle.LicencePlate, licencePlate, StringComparison.OrdinalIgnoreCase));
     }
 
+    
     public void CreateGarage(int capacity) {
         Garages.Add(new Garage<T>(capacity));
     }
 
+    
     public Result<(Garage<T>, T)> FindVehicle(string licencePlate) {
         foreach (var garage in Garages) {
             foreach (var vehicle in garage) {
@@ -84,12 +81,12 @@ public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
         var error = new InvalidOperationException("Cannot find vehicle");
         return new Result<(Garage<T>, T)>(error);
     }
+    
 
     public Dictionary<Type, int> CountVehicleTypes(HashSet<Type> types) {
         var output = new Dictionary<Type, int>();
 
         foreach (var type in types) {
-            // var type = factory.ProducedVehicleType;
             var count = Garages.SelectMany(g => g)
                 .Count(v => v.GetType() == type);
             output[type] = count;
@@ -106,32 +103,8 @@ public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
 
         foreach (var garage in Garages) {
             output.AppendLine(garage.ToString());
-            // output.AppendLine($"Capacity = {garage.Capacity}, #stored = {garage.NumItems}");
-
-            // foreach (var item in garage) {
-            // output.AppendLine(item.ToString());
-            // }
         }
-
-        // if (output.Length > 0 && output.ToString().EndsWith(Environment.NewLine)) {
-        // output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length);
-        // }
 
         return output.ToString().TrimEnd();
     }
 }
-
-
-//
-//
-// foreach (var garage in Garages) {
-//     foreach (var vehicle in garage) {
-//         if (vehicle.LicencePlate != licensePlate) continue;
-//                 
-//         garage.Remove(vehicle);
-//         return true;
-//     }
-// }
-//
-// return false; 
-//

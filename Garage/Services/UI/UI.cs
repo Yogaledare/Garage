@@ -1,15 +1,7 @@
-﻿using System.Collections;
-using System.ComponentModel;
-using System.Reflection;
-using System.Text;
-using Garage.Entity;
-using Garage.Entity.Factory;
+﻿using System.Text;
 using Garage.Entity.Vehicles;
-using Garage.Services.Conversion;
 using Garage.Services.FactoryProvider;
 using Garage.Services.GarageHandler;
-using Garage.Services.Input;
-using LanguageExt.ClassInstances.Const;
 using static Garage.Services.Input.InputValidator;
 using static Garage.Services.Input.InputRetriever;
 
@@ -19,8 +11,6 @@ public class UI : IUI {
     private readonly IGarageHandler<IVehicle> _garageHandler;
     private readonly IVehicleFactoryProvider _factoryProvider;
     private readonly List<(string Description, Action Method)> _menuOptions;
-
-    // public List<(string, IVehicleFactory)> VehicleFactoryOptions { get; set; }
     public event Action OnExitRequested;
 
 
@@ -41,102 +31,61 @@ public class UI : IUI {
     }
 
 
-    private void QueryOnProperties() {
-        IVehicle searchObject = new Car();
+    public void MainMenu() {
+        var continueRunning = true;
+        OnExitRequested += () => continueRunning = false;
 
-        var continueLooping = true; 
-        var mainOptions = new List<(string Description, Action)>
-        {
-            ("Add Condition to Query", () => AddQueryCondition(searchObject)),
-            ("Run Query", () => {
-                continueLooping = false;
-                
-            }),
-        };
-
-        while (continueLooping) {
-            var queryString = BuildQueryStringDisplay(searchObject); 
-            Console.WriteLine($"Query string: {queryString}");
-            var choice = SelectFromMenu(mainOptions);
-            choice(); 
-        }
-
-        var searchResult = _garageHandler.QueryVehicles(searchObject);
-        Console.WriteLine("Matches: ");
-        foreach (var vehicle in searchResult) {
-            Console.WriteLine(vehicle);
+        while (continueRunning) {
+            Console.WriteLine();
+            var chosenMethod = SelectFromMenu(_menuOptions, "Action");
+            Console.WriteLine();
+            chosenMethod.Invoke();
         }
     }
 
 
-    private string BuildQueryStringDisplay(IVehicle searchObject) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.Append(searchObject.LicencePlate is not null ? $"LicencePlate={searchObject.LicencePlate} " : "");
-        stringBuilder.Append(searchObject.NumWheels is not null ? $"NumWheels={searchObject.NumWheels} " : "");
-        stringBuilder.Append(searchObject.Color is not null ? $"NumWheels={searchObject.Color} " : "");
-        stringBuilder.Append(searchObject.TopSpeed is not null ? $"NumWheels={searchObject.TopSpeed} " : "");
-        var output = stringBuilder.ToString().Trim();
-        return output != "" ? output : "(Empty)";
+    private void ExitProgram() {
+        OnExitRequested?.Invoke();
     }
 
 
-    private void AddQueryCondition(IVehicle searchObject) {
-        IEnumerable<(string, Action<IVehicle>)> searchOptions = [
-            ("LicencePlate", EnterLicensePlateSearch),
-            ("NumWheels", EnterNumWheels),
-            ("VehicleColor", EnterVehicleColor),
-            ("TopSpeed", EnterTopSpeed),
-            ("Go Back", vehicle => {
-            })
-        ];
+    private void AddGarage() {
+        var capacity = RetrieveInput("Capacity: ", ValidateNumber);
 
-        var action = SelectFromMenu(searchOptions);
+        _garageHandler.CreateGarage(capacity);
+        Console.WriteLine($"New garage with {capacity} created. Garages: ");
 
-        action(searchObject);
-    }
-
-
-    private void PrePopulate() {
-        _garageHandler.CreateGarage(4);
-        _garageHandler.CreateGarage(10);
-        _garageHandler.CreateGarage(3);
-        _garageHandler.CreateGarage(8);
-
-        List<(IVehicle vehicle, int Destination)> vehicles = [
-            (new Car {
-                LicencePlate = "ABC123",
-                NumWheels = 4,
-                Color = VehicleColor.Blue,
-                TopSpeed = 150,
-                NumDoors = 4
-            }, 0),
-            (new Car {
-                LicencePlate = "DEF456",
-                NumWheels = 4,
-                Color = VehicleColor.Black,
-                TopSpeed = 160,
-                NumDoors = 5
-            }, 2),
-            (new Car {
-                LicencePlate = "GHI789",
-                NumWheels = 4,
-                Color = VehicleColor.White,
-                TopSpeed = 170,
-                NumDoors = 3
-            }, 20),
-        ];
-
-        foreach (var (vehicle, destination) in vehicles) {
-            var garage = _garageHandler.Garages[destination % _garageHandler.Garages.Count];
-            var result = _garageHandler.AddVehicle(vehicle, garage);
-            var output = result.Match(
-                Succ: v => $"Added {vehicle.GetType().Name} to {garage.ShortDescription()}",
-                Fail: ex => ex.Message
-            );
-            Console.WriteLine(output);
+        foreach (var garage in _garageHandler.Garages) {
+            Console.WriteLine(garage);
         }
     }
-    
+
+
+    private void AddVehicle() {
+        var garages = _garageHandler.Garages;
+
+        if (garages.Count <= 0) {
+            Console.WriteLine("Create a garage first!");
+            return;
+        }
+
+        var vehicleFactory = SelectFromMenu(_factoryProvider.GetAvailableFactories(), "Vehicle");
+        var vehicleInstance = vehicleFactory.CreateVehicle();
+        Console.WriteLine("Vehicle Details:");
+        Console.WriteLine(vehicleInstance.ToString());
+
+        var garagesDescribed = garages.Select(g => (g.ShortDescription(), g));
+        var garageSelected = SelectFromMenu(garagesDescribed, "Garage");
+        var result = _garageHandler.AddVehicle(vehicleInstance, garageSelected);
+
+        var output = result.Match(
+            Succ: v => $"Added {vehicleInstance.GetType().Name} to {garageSelected.ShortDescription()}",
+            Fail: ex => ex.Message
+        );
+
+        Console.WriteLine(output);
+    }
+
 
     private void RemoveVehicle() {
         var licensePlate = RetrieveInput("Licence plate: ", ValidateLicensePlateSearch);
@@ -145,7 +94,13 @@ public class UI : IUI {
         Console.WriteLine(message);
     }
 
-    
+
+    private void ListParkedVehicles() {
+        var output = _garageHandler.ListContents();
+        Console.WriteLine(output);
+    }
+
+
     private void ListVehicleTypes() {
         HashSet<Type> types = new HashSet<Type>();
 
@@ -172,30 +127,6 @@ public class UI : IUI {
     }
 
 
-    public void MainMenu() {
-        var continueRunning = true;
-        OnExitRequested += () => continueRunning = false;
-
-        while (continueRunning) {
-            Console.WriteLine();
-            var chosenMethod = SelectFromMenu(_menuOptions);
-            Console.WriteLine();
-            chosenMethod.Invoke();
-        }
-    }
-
-
-    private void ExitProgram() {
-        OnExitRequested?.Invoke();
-    }
-
-
-    private void ListParkedVehicles() {
-        var output = _garageHandler.ListContents();
-        Console.WriteLine(output);
-    }
-    
-
     private void SearchForVehicle() {
         Console.WriteLine("Enter licence plate to search for (format 'ABC123', non-case sensitive)");
         var input = RetrieveInput("Plate number: ", ValidateLicensePlateSearch);
@@ -217,310 +148,107 @@ public class UI : IUI {
     }
 
 
-    private void AddGarage() {
-        var capacity = RetrieveInput("Capacity: ", ValidateNumber);
+    private void QueryOnProperties() {
+        IVehicle searchObject = new Car();
 
-        _garageHandler.CreateGarage(capacity);
-        Console.WriteLine($"New garage with {capacity} created. Garages: ");
+        var continueLooping = true;
+        var mainOptions = new List<(string Description, Action)> {
+            ("Add Condition to Query", () => AddQueryCondition(searchObject)),
+            ("Run Query", () => {
+                continueLooping = false;
+            }),
+        };
 
-        foreach (var garage in _garageHandler.Garages) {
-            Console.WriteLine(garage);
+        while (continueLooping) {
+            var queryString = BuildQueryStringDisplay(searchObject);
+            Console.WriteLine($"Query string: {queryString}");
+            var choice = SelectFromMenu(mainOptions, "Action");
+            choice();
+        }
+
+        var searchResult = _garageHandler.QueryVehicles(searchObject);
+        Console.WriteLine("Matches: ");
+
+        if (searchResult.Count == 0) {
+            Console.WriteLine("(None)");
+        }
+        else {
+            foreach (var vehicle in searchResult) {
+                Console.WriteLine(vehicle);
+            }
         }
     }
 
 
-    public void AddVehicle() {
-        var garages = _garageHandler.Garages;
+    private string BuildQueryStringDisplay(IVehicle searchObject) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.Append(searchObject.LicencePlate is not null ? $"LicencePlate={searchObject.LicencePlate} " : "");
+        stringBuilder.Append(searchObject.NumWheels is not null ? $"NumWheels={searchObject.NumWheels} " : "");
+        stringBuilder.Append(searchObject.Color is not null ? $"NumWheels={searchObject.Color} " : "");
+        stringBuilder.Append(searchObject.TopSpeed is not null ? $"NumWheels={searchObject.TopSpeed} " : "");
+        var output = stringBuilder.ToString().Trim();
+        return output != "" ? output : "(Empty)";
+    }
 
-        if (garages.Count <= 0) {
-            Console.WriteLine("Create a garage first!");
-            return;
+
+    private void AddQueryCondition(IVehicle searchObject) {
+        IEnumerable<(string, Action<IVehicle>)> searchOptions = [
+            ("LicencePlate", EnterLicensePlateSearch),
+            ("NumWheels", EnterNumWheels),
+            ("VehicleColor", EnterVehicleColor),
+            ("TopSpeed", EnterTopSpeed),
+            ("Go Back", vehicle => {
+            })
+        ];
+
+        var action = SelectFromMenu(searchOptions, "Property");
+
+        action(searchObject);
+    }
+
+
+    private void PrePopulate() {
+        _garageHandler.CreateGarage(4);
+        _garageHandler.CreateGarage(10);
+        _garageHandler.CreateGarage(3);
+        _garageHandler.CreateGarage(8);
+
+        List<(IVehicle vehicle, int Destination)> vehicles = [
+            (new Car {LicencePlate = "CAR123", NumWheels = 4, Color = VehicleColor.Red, TopSpeed = 180, NumDoors = 4}, 0),
+            (new Car {LicencePlate = "CAR456", NumWheels = 4, Color = VehicleColor.Red, TopSpeed = 190, NumDoors = 2}, 1),
+            (new Car {LicencePlate = "ZXI987", NumWheels = 4, Color = VehicleColor.Blue, TopSpeed = 180, NumDoors = 2}, 2),
+            (new Car {LicencePlate = "CAR789", NumWheels = 4, Color = VehicleColor.White, TopSpeed = 200, NumDoors = 4}, 3),
+
+            // Motorcycles 
+            (new Motorcycle {LicencePlate = "MCY123", NumWheels = 2, Color = VehicleColor.Black, TopSpeed = 200, CylinderVolume = 500},
+                1),
+            (new Motorcycle {LicencePlate = "MCY456", NumWheels = 2, Color = VehicleColor.Red, TopSpeed = 210, CylinderVolume = 750},
+                2),
+            (new Motorcycle {LicencePlate = "BIK999", NumWheels = 2, Color = VehicleColor.Black, TopSpeed = 220, CylinderVolume = 600},
+                0),
+
+            // Airplanes
+            (new Airplane {LicencePlate = "AIR123", NumWheels = 6, Color = VehicleColor.White, TopSpeed = 800, NumberOfEngines = 2},
+                2),
+            (new Airplane {LicencePlate = "FLY456", NumWheels = 10, Color = VehicleColor.White, TopSpeed = 900, NumberOfEngines = 4},
+                3),
+
+            // Buses 
+            (new Bus {LicencePlate = "BUS123", NumWheels = 6, Color = VehicleColor.Blue, TopSpeed = 100, NumberOfSeats = 50}, 3),
+            (new Bus {LicencePlate = "BUS456", NumWheels = 8, Color = VehicleColor.Red, TopSpeed = 90, NumberOfSeats = 45}, 1),
+            // Boats
+            (new Boat {LicencePlate = "BOA123", NumWheels = 0, Color = VehicleColor.White, TopSpeed = 85, Length = 20}, 0),
+            (new Boat {LicencePlate = "SAL789", NumWheels = 0, Color = VehicleColor.Blue, TopSpeed = 55, Length = 25}, 3),
+        ];
+
+        foreach (var (vehicle, destination) in vehicles) {
+            var garage = _garageHandler.Garages[destination % _garageHandler.Garages.Count];
+            var result = _garageHandler.AddVehicle(vehicle, garage);
+            var output = result.Match(
+                Succ: v => $"Added {vehicle.GetType().Name} to {garage.ShortDescription()}",
+                Fail: ex => ex.Message
+            );
+            Console.WriteLine(output);
         }
-
-        var vehicleFactory = SelectFromMenu(_factoryProvider.GetAvailableFactories());
-        var vehicleInstance = vehicleFactory.CreateVehicle();
-        Console.WriteLine("Vehicle Details:");
-        Console.WriteLine(vehicleInstance.ToString());
-
-        var garagesDescribed = garages.Select(g => (g.ShortDescription(), g));
-        var garageSelected = SelectFromMenu(garagesDescribed);
-        var result = _garageHandler.AddVehicle(vehicleInstance, garageSelected);
-
-        var output = result.Match(
-            Succ: v => $"Added {vehicleInstance.GetType().Name} to {garageSelected.ShortDescription()}",
-            Fail: ex => ex.Message
-        );
-
-        Console.WriteLine(output);
     }
 }
-
-
-// bool addingConditions = true;
-// while (addingConditions)
-// {
-// Console.WriteLine("Select a property to add to the query:");
-// var action = InputRetriever.SelectFromMenu(searchOptions);
-// if (action == /* the action corresponding to 'Go Back' */)
-// {
-// addingConditions = false;
-// }
-// else
-// {
-// action(searchObject);
-// }
-// }
-
-
-// public static void EnterNumWheels<T>(T vehicle) where T : IVehicle {
-//     vehicle.NumWheels = RetrieveInput("NumWheels: ", s => ValidateNumberBounded(s, 0, 8));
-// }
-//
-//
-// public static void EnterVehicleColor<T>(T vehicle) where T : IVehicle {
-//     vehicle.Color = SelectFromEnum<VehicleColor>();
-// }
-//
-// public static void EnterTopSpeed<T>(T vehicle) where T : IVehicle {
-//     vehicle.TopSpeed = RetrieveInput("TopSpeed: ", s => ValidateNumberBounded(s, 0, 450)); 
-// }
-
-
-// Action<IVehicle> getLicensePlate = vehicle => vehicle.LicencePlate = RetrieveInput("LicensePlate: ", ValidateLicensePlateSearch);
-// Action<IVehicle> getNumWheels = Vehicle => Vehicle.NumWheels = RetrieveInput("NumWheels: ", s => ValidateNumberBounded(s, 0, 8));
-// var getColor = () => SelectFromEnum<VehicleColor>();
-// var getTopSpeed = () => RetrieveInput("TopSpeed: ", s => ValidateNumberBounded(s, 0, 450)); 
-//
-//
-// List<Action> queryMethods = [
-//     InputRetriever.RetrieveInput(
-//         "LicensePlate: ",
-//         s => InputValidator.ValidateLicensePlateSearch(s)
-//     ),
-// ]; 
-
-
-// var query = RetrieveInput("Query: ", s => ValidateQuery(s)); 
-
-
-// InputRetriever.RetrieveInput(
-//     "LicensePlate: ",
-//     s => InputValidator.ValidateLicensePlate(s, _garageHandler)
-// )
-
-
-// vehicle.LicencePlate = InputRetriever.RetrieveInput(
-// "LicensePlate: ",
-// s => InputValidator.ValidateLicensePlate(s, garageHandler)
-// );
-// vehicle.NumWheels = InputRetriever.RetrieveInput(
-// "numWheels: ",
-// s => InputValidator.ValidateNumberBounded(s, 0, 4)
-// );
-// vehicle.Color = InputRetriever.SelectFromEnum<VehicleColor>();
-// vehicle.TopSpeed = InputRetriever.RetrieveInput(
-// "TopSpeed: ",
-// s => InputValidator.ValidateDoubleBounded(s, 0, 450)
-// );
-
-
-//
-//
-//
-// private void InitializeMenuOptions() {
-//
-// }
-//
-//
-
-//
-// public IVehicle CreateVehicle() {
-//     var vehicleFactory = SelectFromMenu(_vehicleFactoryOptions);
-//     return vehicleFactory.CreateVehicle();
-// }
-
-
-//
-// private static Type ChooseVehicleType() {
-//     var vehicleTypes = Assembly.GetExecutingAssembly()
-//         .GetTypes()
-//         .Where(t => typeof(IVehicle).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-//         .ToList();
-//
-//     if (vehicleTypes.Count == 0) {
-//         throw new InvalidOperationException("No vehicle classes available!");
-//     }
-//
-//     var vehicleTypesDescribed = vehicleTypes.Select(t => (t.Name, t));
-//     var vehicleType = SelectFromMenu(vehicleTypesDescribed);
-//
-//     return vehicleType;
-// }
-//
-//
-// private IVehicle BuildVehicleInstance(Type vehicleType) {
-//     var vehicleObject = Activator.CreateInstance(vehicleType);
-//
-//     if (vehicleObject is not IVehicle vehicleInstance) {
-//         throw new InvalidOperationException($"The created instance is not an IVehicle: {vehicleType.Name}");
-//     }
-//
-//     foreach (var propertyInfo in vehicleType.GetProperties()) {
-//         var entry = RetrieveInput(
-//             $"{propertyInfo.Name}: ",
-//             s => ValidateProperty(s, propertyInfo, _converter, _garageHandler));
-//         propertyInfo.SetValue(vehicleInstance, entry);
-//     }
-//
-//     return vehicleInstance;
-// }
-//
-
-
-// Console.WriteLine("Choose a vehicle");
-
-// for (var i = 0; i < vehicleTypes.Count; i++) {
-//     Console.WriteLine($"{i}: {vehicleTypes[i].Name}");
-// }
-//
-// var numTypes = vehicleTypes.Count;
-// var index = InputRetriever.RetrieveInput(
-//     "Choice: ",
-//     i => ValidateNumberBounded(i, 0, numTypes - 1));
-
-// var vehicleType = vehicleTypes[index];
-
-
-// {
-// var description = g.ShortDescription();
-// return (description, g);
-// }); 
-
-// Console.WriteLine("Choose a garage: ");
-// for (var i = 0; i < garages.Count; i++) {
-// Console.WriteLine($"{i}: {garages[i]}");
-// }
-
-
-// var garageSelected = SelectFromMenu()
-
-// var garageIndex = InputRetriever.RetrieveInput("Choice: ", s => ValidateNumberBounded(s, 0, garages.Count));
-// var garageSelected = garages[garageIndex];
-
-
-//
-// private T SelectFromMenu<T>(IEnumerable<(string Description, T Value)> options) {
-//     Console.WriteLine($"Select {typeof(T).Name}");
-//
-//     var index = 0;
-//     var enumerable = options as (string Description, T Value)[] ?? options.ToArray();
-//     foreach (var option in enumerable) {
-//         Console.WriteLine($"{index++}. {option.Description}");
-//     }
-//
-//     var input = InputRetriever.RetrieveInput("Choice: ", s => ValidateNumberBounded(s, 0, index - 1));
-//
-//     return enumerable.ElementAt(input).Value;
-// }
-
-
-// public static void ShowMenu() {
-//     Console.WriteLine("Main menu: ");
-//     Console.WriteLine("1. Add a vehicle");
-//     Console.WriteLine("2. Add a garage");
-//     Console.WriteLine("3. Search for vehicle (by license plate)");
-//     Console.WriteLine("4. List garages (and all parked vehicles))");
-//     Console.WriteLine("0. Exit");
-// }
-
-
-//
-//
-//
-//
-// public bool Navigate() {
-//     var input = RetrieveInput("Choice: ", s => ValidateNumberBounded(s, 0, 4));
-//     Console.WriteLine();
-//
-//     switch (input) {
-//         case 1:
-//             AddVehicle();
-//             break;
-//         case 2:
-//             AddGarage();
-//             break;
-//         case 3:
-//             SearchForVehicle();
-//             break;
-//         case 4:
-//             ListGarages();
-//             break;
-//         case 0:
-//             return false;
-//     }
-//
-//     return true;
-// }
-
-
-//
-//
-// private T SelectFromCollection<T>(IEnumerable<T> options) {
-//     Console.WriteLine($"Choose a {typeof(T).Name}");
-//
-//     var index = 0;
-//     var enumerable = options as T[] ?? options.ToArray();
-//     foreach (var option in enumerable) {
-//         Console.WriteLine($"{index++}. {option}");
-//     }
-//
-//     var input = RetrieveInput("Choice: ", s => ValidateNumberBounded(s, 0, index - 1));
-//
-//     return enumerable.ElementAt(input);
-// }
-//
-
-
-//     = [
-//     ("Add a vehicle", AddVehicle), 
-//     
-//
-//
-// ]; 
-
-
-// private const SortedDictionary<int, (string Description, Action Method)>[] _menuOptions = new SortedDictionary<int, (string, Action)>();
-
-// private SortedDictionary<int, (string Description, Action Method)> _menuOptions = new SortedDictionary<int, (string, Action)>() {
-// {1, }
-// };
-
-
-// public UI() {
-//     _menuOptions.Add(1, ("Add a vehicle", AddVehicle));
-//     _menuOptions.Add(2, ("Add a garage", AddGarage));
-//     _menuOptions.Add(3, ("Search for vehicle (by license plate)", SearchForVehicle));
-//     _menuOptions.Add(4, ("List garages (and all parked vehicles)", ListGarages));
-//     _menuOptions.Add(0, ("Exit", () => { }));
-// }
-
-
-// var contents = garageHandler.ListContents();
-
-// Console.WriteLine(contents);
-
-
-// foreach (var garage in garageHandler.Garages) {
-// Console.WriteLine(garage);
-// }
-
-
-// garageHandler.AddVehicle(vehicleInstance); 
-
-// Print the created object's details
-// if (vehicleInstance != null) {
-
-// }
-// else {
-// Console.WriteLine("Failed to create vehicle instance.");
-// }

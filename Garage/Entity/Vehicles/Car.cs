@@ -5,6 +5,6 @@ public class Car : Vehicle {
         
     public override string ToString()
     {
-        return base.ToString() +  $", NumDoors={NumDoors}";
+        return base.ToString() +  $"NumDoors={NumDoors}";
     }
 }

@@ -8,11 +8,10 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
     private T?[] _items;
 
     public int Capacity { get; }
-    public int NumItems { get; private set; } = 0;
+    
+    public int NumItems { get; private set; }
 
     public bool IsFull => NumItems >= _items.Length;
-
-
 
 
     public Garage(int capacity) {
@@ -67,10 +66,6 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
             output.Append("    ");  
             output.AppendLine(item?.ToString());
         }
-
-        // if (output.Length > 0 && output.ToString().EndsWith(Environment.NewLine)) {
-            // output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length);
-        // }
 
         return output.ToString().TrimEnd();
     }

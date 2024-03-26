@@ -35,8 +35,8 @@ public static class InputRetriever {
     }
 
 
-    public static T SelectFromMenu<T>(IEnumerable<(string, T)> options) {
-        Console.WriteLine($"Select {typeof(T).Name}");
+    public static T SelectFromMenu<T>(IEnumerable<(string, T)> options, string groupName) {
+        Console.WriteLine($"Select {groupName}");
 
         var index = 0;
         var enumerable = options as (string Description, T Value)[] ?? options.ToArray();
@@ -50,14 +50,14 @@ public static class InputRetriever {
     }
 
 
-    public static T SelectFromMenu<T>(IEnumerable<T> options) {
+    public static T SelectFromMenu<T>(IEnumerable<T> options, string groupName) {
         Console.WriteLine($"Select {typeof(T).Name}");
         var describedObjects = options.Select(o => (o?.ToString() ?? "N/A", o));
-        return SelectFromMenu<T>(describedObjects);
+        return SelectFromMenu<T>(describedObjects, groupName);
     }
 
 
-    public static T SelectFromEnum<T>() where T : struct, Enum {
+    public static T SelectFromEnum<T>(string groupName) where T : struct, Enum {
         // Generate the menu options from the enum values
         var optionsDescription = Enum.GetValues(typeof(T))
             .Cast<T>()
@@ -65,7 +65,7 @@ public static class InputRetriever {
             .ToList();
 
         // Use the existing SelectFromMenu method to let the user choose
-        return SelectFromMenu(optionsDescription);
+        return SelectFromMenu(optionsDescription, groupName);
     }
 
     public static void EnterLicensePlateSearch<T>(T vehicle) where T : IVehicle {
@@ -81,7 +81,7 @@ public static class InputRetriever {
     }
 
     public static void EnterVehicleColor<T>(T vehicle) where T : IVehicle {
-        vehicle.Color = SelectFromEnum<VehicleColor>();
+        vehicle.Color = SelectFromEnum<VehicleColor>("Color");
     }
 
     public static void EnterTopSpeed<T>(T vehicle) where T : IVehicle {
