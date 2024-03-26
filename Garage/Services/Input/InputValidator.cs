@@ -18,7 +18,7 @@ public static class InputValidator {
     // }
     
 
-    public static Result<string> ValidateLicensePlate(string? input, IGarageHandler<IVehicle> garageHandler) {
+    public static Result<string> ValidateLicensePlate(string? input) {
         if (string.IsNullOrEmpty(input)) {
             var error = new ValidationException("Error: null or empty input");
             return new Result<string>(error);
