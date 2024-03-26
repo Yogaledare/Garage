@@ -14,9 +14,9 @@ namespace Garage.Services.UI;
 
 public class UI : IUI {
     private readonly IGarageHandler<IVehicle> _garageHandler;
-    private readonly IVehicleFactoryProvider _factoryProvider; 
+    private readonly IVehicleFactoryProvider _factoryProvider;
     private readonly List<(string Description, Action Method)> _menuOptions;
-    
+
     // public List<(string, IVehicleFactory)> VehicleFactoryOptions { get; set; }
     public event Action OnExitRequested;
 
@@ -37,8 +37,38 @@ public class UI : IUI {
     }
 
     private void PrePopulate() {
-        
-        
+        _garageHandler.CreateGarage(4);
+        _garageHandler.CreateGarage(10);
+        _garageHandler.CreateGarage(3);
+        _garageHandler.CreateGarage(8);
+
+        List<(IVehicle vehicle, int Destination)> vehicles = [
+            (new Car {
+                LicencePlate = "ABC123",
+                NumWheels = 4,
+                Color = VehicleColor.Blue,
+                TopSpeed = 150,
+                NumDoors = 4
+            }, 0),
+            (new Car {
+                LicencePlate = "DEF456",
+                NumWheels = 4,
+                Color = VehicleColor.Black,
+                TopSpeed = 160,
+                NumDoors = 5
+            }, 2),
+            (new Car {
+                LicencePlate = "GHI789",
+                NumWheels = 4,
+                Color = VehicleColor.White,
+                TopSpeed = 170,
+                NumDoors = 3
+            }, 0),
+        ];
+
+        foreach (var (vehicle, destination) in vehicles) {
+            _garageHandler.AddVehicle(vehicle, _garageHandler.Garages[destination]);
+        }
     }
 
     private void RemoveVehicle() {
@@ -52,24 +82,24 @@ public class UI : IUI {
         HashSet<Type> types = new HashSet<Type>();
 
         foreach (var (description, factory) in _factoryProvider.GetAvailableFactories()) {
-            types.Add(factory.ProducedVehicleType); 
+            types.Add(factory.ProducedVehicleType);
         }
-        
+
         var response = _garageHandler.CountVehicleTypes(types);
-    
+
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.Append("Vehicle types (#):"); 
-        
+        stringBuilder.Append("Vehicle types (#):");
+
         bool isFirst = true;
         foreach (var (type, count) in response) {
             if (!isFirst) {
                 stringBuilder.Append(',');
             }
-    
-            stringBuilder.Append($" {type.Name} ({count}),"); 
-            isFirst = false; 
+
+            stringBuilder.Append($" {type.Name} ({count}),");
+            isFirst = false;
         }
-    
+
         Console.WriteLine(stringBuilder.ToString());
     }
 
@@ -149,9 +179,6 @@ public class UI : IUI {
         _garageHandler.AddVehicle(vehicleInstance, garageSelected);
         Console.WriteLine($"Added {vehicleInstance.GetType().Name} to {garageSelected.ShortDescription()}");
     }
-    
-    
-
 }
 
 //
