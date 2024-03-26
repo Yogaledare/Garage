@@ -8,7 +8,7 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
     private T?[] _items;
 
     public int Capacity { get; }
-    
+
     public int NumItems { get; private set; }
 
     public bool IsFull => NumItems >= _items.Length;
@@ -16,23 +16,29 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
 
     public Garage(int capacity) {
         _items = new T?[capacity];
-        Capacity = capacity; 
+        Capacity = capacity;
     }
 
-    
+
     public bool Add(T input) {
         if (IsFull) {
             return false;
         }
 
-        var index = Array.IndexOf(_items, null);
+        var indexSameItem = Array.IndexOf(_items, input);
 
-        if (index is -1) {
+        if (indexSameItem != -1) {
             return false;
         }
 
-        _items[index] = input;
-        NumItems++; 
+        var indexFirstEmpty = Array.IndexOf(_items, null);
+
+        if (indexFirstEmpty is -1) {
+            return false;
+        }
+
+        _items[indexFirstEmpty] = input;
+        NumItems++;
         return true;
     }
 
@@ -45,25 +51,25 @@ public class Garage<T> : IEnumerable<T> where T : IVehicle {
         }
 
         _items[index] = default;
-        NumItems--; 
+        NumItems--;
         return true;
     }
 
 
     public string ShortDescription() {
-        return $"Garage with capacity = {Capacity}, #stored = {NumItems}"; 
+        return $"Garage with capacity = {Capacity}, #stored = {NumItems}";
     }
 
 
     public override string ToString() {
-        var output = new StringBuilder(); 
-        
+        var output = new StringBuilder();
+
         output.AppendLine(ShortDescription());
 
-        var itemsNotNull = _items.Where(item => item is not null); 
-        
+        var itemsNotNull = _items.Where(item => item is not null);
+
         foreach (var item in itemsNotNull) {
-            output.Append("    ");  
+            output.Append("    ");
             output.AppendLine(item?.ToString());
         }
 

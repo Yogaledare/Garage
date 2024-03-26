@@ -17,8 +17,8 @@ public abstract class Vehicle : IVehicle {
         stringBuilder.Append($"{GetType().Name} ");
         stringBuilder.Append(LicencePlate is not null ? $"LicencePlate={LicencePlate} " : "");
         stringBuilder.Append(NumWheels is not null ? $"NumWheels={NumWheels} " : "");
-        stringBuilder.Append(Color is not null ? $"NumWheels={Color} " : "");
-        stringBuilder.Append(TopSpeed is not null ? $"NumWheels={TopSpeed} " : "");
+        stringBuilder.Append(Color is not null ? $"Color={Color} " : "");
+        stringBuilder.Append(TopSpeed is not null ? $"TopSpeed={TopSpeed} " : "");
 
         return stringBuilder.ToString();
     }

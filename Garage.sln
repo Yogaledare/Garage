@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Garage", "Garage\Garage.csproj", "{3FD04C37-5109-45B2-A0D1-9E583CF61398}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Garage.Test", "Garage.Test\Garage.Test.csproj", "{4BDD1E3B-089F-4654-A406-4C4F7ED7D06F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{3FD04C37-5109-45B2-A0D1-9E583CF61398}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3FD04C37-5109-45B2-A0D1-9E583CF61398}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3FD04C37-5109-45B2-A0D1-9E583CF61398}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4BDD1E3B-089F-4654-A406-4C4F7ED7D06F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BDD1E3B-089F-4654-A406-4C4F7ED7D06F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BDD1E3B-089F-4654-A406-4C4F7ED7D06F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BDD1E3B-089F-4654-A406-4C4F7ED7D06F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
