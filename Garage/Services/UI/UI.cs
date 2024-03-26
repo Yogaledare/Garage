@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections;
+using System.ComponentModel;
 using System.Reflection;
 using System.Text;
 using Garage.Entity;
@@ -31,36 +32,69 @@ public class UI : IUI {
             ("Add garage", AddGarage),
             ("Add vehicle", AddVehicle),
             ("Remove vehicle", RemoveVehicle),
-            ("Search for vehicle", SearchForVehicle),
-            // ("Query on properties", QueryOnProperties),
+            ("Query on properties", QueryOnProperties),
             ("List parked vehicles (& garages)", ListParkedVehicles),
             ("List vehicle types", ListVehicleTypes),
             ("Pre-populate garages", PrePopulate),
+            ("Search for vehicle", SearchForVehicle),
         ];
     }
 
 
     private void QueryOnProperties() {
-
         IVehicle searchObject = new Car();
 
+        var continueLooping = true; 
+        var mainOptions = new List<(string Description, Action)>
+        {
+            ("Add Condition to Query", () => AddQueryCondition(searchObject)),
+            ("Run Query", () => {
+                continueLooping = false;
+                
+            }),
+        };
+
+        while (continueLooping) {
+            var queryString = BuildQueryStringDisplay(searchObject); 
+            Console.WriteLine($"Query string: {queryString}");
+            var choice = SelectFromMenu(mainOptions);
+            choice(); 
+        }
+
+        var searchResult = _garageHandler.QueryVehicles(searchObject);
+        Console.WriteLine("Matches: ");
+        foreach (var vehicle in searchResult) {
+            Console.WriteLine(vehicle);
+        }
+    }
+
+
+    private string BuildQueryStringDisplay(IVehicle searchObject) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.Append(searchObject.LicencePlate is not null ? $"LicencePlate={searchObject.LicencePlate} " : "");
+        stringBuilder.Append(searchObject.NumWheels is not null ? $"NumWheels={searchObject.NumWheels} " : "");
+        stringBuilder.Append(searchObject.Color is not null ? $"NumWheels={searchObject.Color} " : "");
+        stringBuilder.Append(searchObject.TopSpeed is not null ? $"NumWheels={searchObject.TopSpeed} " : "");
+        var output = stringBuilder.ToString().Trim();
+        return output != "" ? output : "(Empty)";
+    }
+
+
+    private void AddQueryCondition(IVehicle searchObject) {
         IEnumerable<(string, Action<IVehicle>)> searchOptions = [
             ("LicencePlate", EnterLicensePlateSearch),
             ("NumWheels", EnterNumWheels),
             ("VehicleColor", EnterVehicleColor),
             ("TopSpeed", EnterTopSpeed),
-        ]; 
+            ("Go Back", vehicle => {
+            })
+        ];
 
-        
-        
+        var action = SelectFromMenu(searchOptions);
 
-
-
-
+        action(searchObject);
     }
-    
-    
-    
+
 
     private void PrePopulate() {
         _garageHandler.CreateGarage(4);
@@ -89,11 +123,11 @@ public class UI : IUI {
                 Color = VehicleColor.White,
                 TopSpeed = 170,
                 NumDoors = 3
-            }, 0),
+            }, 20),
         ];
 
         foreach (var (vehicle, destination) in vehicles) {
-            var garage = _garageHandler.Garages[destination]; 
+            var garage = _garageHandler.Garages[destination % _garageHandler.Garages.Count];
             var result = _garageHandler.AddVehicle(vehicle, garage);
             var output = result.Match(
                 Succ: v => $"Added {vehicle.GetType().Name} to {garage.ShortDescription()}",
@@ -102,6 +136,7 @@ public class UI : IUI {
             Console.WriteLine(output);
         }
     }
+    
 
     private void RemoveVehicle() {
         var licensePlate = RetrieveInput("Licence plate: ", ValidateLicensePlateSearch);
@@ -110,6 +145,7 @@ public class UI : IUI {
         Console.WriteLine(message);
     }
 
+    
     private void ListVehicleTypes() {
         HashSet<Type> types = new HashSet<Type>();
 
@@ -158,6 +194,7 @@ public class UI : IUI {
         var output = _garageHandler.ListContents();
         Console.WriteLine(output);
     }
+    
 
     private void SearchForVehicle() {
         Console.WriteLine("Enter licence plate to search for (format 'ABC123', non-case sensitive)");
@@ -219,9 +256,22 @@ public class UI : IUI {
 }
 
 
+// bool addingConditions = true;
+// while (addingConditions)
+// {
+// Console.WriteLine("Select a property to add to the query:");
+// var action = InputRetriever.SelectFromMenu(searchOptions);
+// if (action == /* the action corresponding to 'Go Back' */)
+// {
+// addingConditions = false;
+// }
+// else
+// {
+// action(searchObject);
+// }
+// }
 
 
-    
 // public static void EnterNumWheels<T>(T vehicle) where T : IVehicle {
 //     vehicle.NumWheels = RetrieveInput("NumWheels: ", s => ValidateNumberBounded(s, 0, 8));
 // }
@@ -252,15 +302,13 @@ public class UI : IUI {
 
 // var query = RetrieveInput("Query: ", s => ValidateQuery(s)); 
 
-    
+
 // InputRetriever.RetrieveInput(
 //     "LicensePlate: ",
 //     s => InputValidator.ValidateLicensePlate(s, _garageHandler)
 // )
-    
-    
-    
-    
+
+
 // vehicle.LicencePlate = InputRetriever.RetrieveInput(
 // "LicensePlate: ",
 // s => InputValidator.ValidateLicensePlate(s, garageHandler)
@@ -274,9 +322,6 @@ public class UI : IUI {
 // "TopSpeed: ",
 // s => InputValidator.ValidateDoubleBounded(s, 0, 450)
 // );
-
-
-
 
 
 //

@@ -85,7 +85,7 @@ public static class InputRetriever {
     }
 
     public static void EnterTopSpeed<T>(T vehicle) where T : IVehicle {
-        vehicle.TopSpeed = RetrieveInput("TopSpeed: ", s => ValidateDoubleBounded(s, 0, 450));
+        vehicle.TopSpeed = RetrieveInput("TopSpeed: ", s => ValidateNumberBounded(s, 0, 450));
     }
 }
 

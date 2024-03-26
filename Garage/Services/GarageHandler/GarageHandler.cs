@@ -32,6 +32,23 @@ public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
         return vehicle;
     }
 
+
+    public List<T> QueryVehicles(T searchCriteria) {
+        var query = Garages.SelectMany(g => g).AsQueryable();
+
+        if (searchCriteria.LicencePlate != null)
+            query = query.Where(vehicle => vehicle.LicencePlate == searchCriteria.LicencePlate);
+        if (searchCriteria.NumWheels != null)
+            query = query.Where(vehicle => vehicle.NumWheels == searchCriteria.NumWheels);
+        if (searchCriteria.Color != null)
+            query = query.Where(vehicle => vehicle.Color == searchCriteria.Color);
+        if (searchCriteria.TopSpeed != null)
+            query = query.Where(vehicle => vehicle.TopSpeed == searchCriteria.TopSpeed);
+
+        return query.ToList();
+    }
+    
+
     public bool RemoveVehicle(string licensePlate) {
         var searchResult = FindVehicle(licensePlate);
 

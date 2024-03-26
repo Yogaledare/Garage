@@ -12,5 +12,6 @@ public interface IGarageHandler<T> where T : IVehicle {
     void CreateGarage(int capacity);
     public string ListContents();
     Result<(Garage<T>, T)> FindVehicle(string licencePlate);
-    Dictionary<Type, int> CountVehicleTypes(HashSet<Type> types); 
+    Dictionary<Type, int> CountVehicleTypes(HashSet<Type> types);
+    List<T> QueryVehicles(T searchCriteria);
 }
