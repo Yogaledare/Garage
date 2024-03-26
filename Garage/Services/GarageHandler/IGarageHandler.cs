@@ -6,7 +6,7 @@ namespace Garage.Services.GarageHandler;
 
 public interface IGarageHandler<T> where T : IVehicle {
     List<Garage<T>> Garages { get; }
-    bool AddVehicle(T vehicle, Garage<T> garage);
+    Result<T> AddVehicle(T vehicle, Garage<T> garage);
     bool RemoveVehicle(string licensePlate);
     bool DoesLicencePlateExist(string? licencePlate);
     void CreateGarage(int capacity);

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel;
+using System.Reflection;
 using System.Text;
 using Garage.Entity;
 using Garage.Entity.Factory;
@@ -7,6 +8,7 @@ using Garage.Services.Conversion;
 using Garage.Services.FactoryProvider;
 using Garage.Services.GarageHandler;
 using Garage.Services.Input;
+using LanguageExt.ClassInstances.Const;
 using static Garage.Services.Input.InputValidator;
 using static Garage.Services.Input.InputRetriever;
 
@@ -30,11 +32,35 @@ public class UI : IUI {
             ("Add vehicle", AddVehicle),
             ("Remove vehicle", RemoveVehicle),
             ("Search for vehicle", SearchForVehicle),
+            // ("Query on properties", QueryOnProperties),
             ("List parked vehicles (& garages)", ListParkedVehicles),
             ("List vehicle types", ListVehicleTypes),
             ("Pre-populate garages", PrePopulate),
         ];
     }
+
+
+    private void QueryOnProperties() {
+
+        IVehicle searchObject = new Car();
+
+        IEnumerable<(string, Action<IVehicle>)> searchOptions = [
+            ("LicencePlate", EnterLicensePlateSearch),
+            ("NumWheels", EnterNumWheels),
+            ("VehicleColor", EnterVehicleColor),
+            ("TopSpeed", EnterTopSpeed),
+        ]; 
+
+        
+        
+
+
+
+
+    }
+    
+    
+    
 
     private void PrePopulate() {
         _garageHandler.CreateGarage(4);
@@ -67,7 +93,13 @@ public class UI : IUI {
         ];
 
         foreach (var (vehicle, destination) in vehicles) {
-            _garageHandler.AddVehicle(vehicle, _garageHandler.Garages[destination]);
+            var garage = _garageHandler.Garages[destination]; 
+            var result = _garageHandler.AddVehicle(vehicle, garage);
+            var output = result.Match(
+                Succ: v => $"Added {vehicle.GetType().Name} to {garage.ShortDescription()}",
+                Fail: ex => ex.Message
+            );
+            Console.WriteLine(output);
         }
     }
 
@@ -170,16 +202,82 @@ public class UI : IUI {
 
         var vehicleFactory = SelectFromMenu(_factoryProvider.GetAvailableFactories());
         var vehicleInstance = vehicleFactory.CreateVehicle();
-        Console.WriteLine("Created Vehicle Details:");
+        Console.WriteLine("Vehicle Details:");
         Console.WriteLine(vehicleInstance.ToString());
 
         var garagesDescribed = garages.Select(g => (g.ShortDescription(), g));
         var garageSelected = SelectFromMenu(garagesDescribed);
+        var result = _garageHandler.AddVehicle(vehicleInstance, garageSelected);
 
-        _garageHandler.AddVehicle(vehicleInstance, garageSelected);
-        Console.WriteLine($"Added {vehicleInstance.GetType().Name} to {garageSelected.ShortDescription()}");
+        var output = result.Match(
+            Succ: v => $"Added {vehicleInstance.GetType().Name} to {garageSelected.ShortDescription()}",
+            Fail: ex => ex.Message
+        );
+
+        Console.WriteLine(output);
     }
 }
+
+
+
+
+    
+// public static void EnterNumWheels<T>(T vehicle) where T : IVehicle {
+//     vehicle.NumWheels = RetrieveInput("NumWheels: ", s => ValidateNumberBounded(s, 0, 8));
+// }
+//
+//
+// public static void EnterVehicleColor<T>(T vehicle) where T : IVehicle {
+//     vehicle.Color = SelectFromEnum<VehicleColor>();
+// }
+//
+// public static void EnterTopSpeed<T>(T vehicle) where T : IVehicle {
+//     vehicle.TopSpeed = RetrieveInput("TopSpeed: ", s => ValidateNumberBounded(s, 0, 450)); 
+// }
+
+
+// Action<IVehicle> getLicensePlate = vehicle => vehicle.LicencePlate = RetrieveInput("LicensePlate: ", ValidateLicensePlateSearch);
+// Action<IVehicle> getNumWheels = Vehicle => Vehicle.NumWheels = RetrieveInput("NumWheels: ", s => ValidateNumberBounded(s, 0, 8));
+// var getColor = () => SelectFromEnum<VehicleColor>();
+// var getTopSpeed = () => RetrieveInput("TopSpeed: ", s => ValidateNumberBounded(s, 0, 450)); 
+//
+//
+// List<Action> queryMethods = [
+//     InputRetriever.RetrieveInput(
+//         "LicensePlate: ",
+//         s => InputValidator.ValidateLicensePlateSearch(s)
+//     ),
+// ]; 
+
+
+// var query = RetrieveInput("Query: ", s => ValidateQuery(s)); 
+
+    
+// InputRetriever.RetrieveInput(
+//     "LicensePlate: ",
+//     s => InputValidator.ValidateLicensePlate(s, _garageHandler)
+// )
+    
+    
+    
+    
+// vehicle.LicencePlate = InputRetriever.RetrieveInput(
+// "LicensePlate: ",
+// s => InputValidator.ValidateLicensePlate(s, garageHandler)
+// );
+// vehicle.NumWheels = InputRetriever.RetrieveInput(
+// "numWheels: ",
+// s => InputValidator.ValidateNumberBounded(s, 0, 4)
+// );
+// vehicle.Color = InputRetriever.SelectFromEnum<VehicleColor>();
+// vehicle.TopSpeed = InputRetriever.RetrieveInput(
+// "TopSpeed: ",
+// s => InputValidator.ValidateDoubleBounded(s, 0, 450)
+// );
+
+
+
+
 
 //
 //

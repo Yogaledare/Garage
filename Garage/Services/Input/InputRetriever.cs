@@ -1,4 +1,6 @@
-﻿using LanguageExt.Common;
+﻿using Garage.Entity.Vehicles;
+using Garage.Services.GarageHandler;
+using LanguageExt.Common;
 using static Garage.Services.Input.InputValidator;
 
 namespace Garage.Services.Input;
@@ -64,6 +66,26 @@ public static class InputRetriever {
 
         // Use the existing SelectFromMenu method to let the user choose
         return SelectFromMenu(optionsDescription);
+    }
+
+    public static void EnterLicensePlateSearch<T>(T vehicle) where T : IVehicle {
+        vehicle.LicencePlate = RetrieveInput("License plate: ", ValidateLicensePlateSearch);
+    }
+
+    public static void EnterLicensePlate<T>(T vehicle, IGarageHandler<IVehicle> garageHandler) where T : IVehicle {
+        vehicle.LicencePlate = RetrieveInput("License plate: ", s => ValidateLicensePlate(s, garageHandler));
+    }
+
+    public static void EnterNumWheels<T>(T vehicle) where T : IVehicle {
+        vehicle.NumWheels = RetrieveInput("NumWheels: ", s => ValidateNumberBounded(s, 0, 8));
+    }
+
+    public static void EnterVehicleColor<T>(T vehicle) where T : IVehicle {
+        vehicle.Color = SelectFromEnum<VehicleColor>();
+    }
+
+    public static void EnterTopSpeed<T>(T vehicle) where T : IVehicle {
+        vehicle.TopSpeed = RetrieveInput("TopSpeed: ", s => ValidateDoubleBounded(s, 0, 450));
     }
 }
 

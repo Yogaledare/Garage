@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using FluentValidation;
 using Garage.Entity;
 using Garage.Entity.Vehicles;
 using Garage.Services.UI;
@@ -16,13 +17,19 @@ public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
 
     public List<Garage<T>> Garages { get; } = [];
 
-    public bool AddVehicle(T vehicle, Garage<T> garage) {
-        if (DoesLicencePlateExist(vehicle.LicencePlate)) return false;
+    public Result<T> AddVehicle(T vehicle, Garage<T> garage) {
+        if (DoesLicencePlateExist(vehicle.LicencePlate)) {
+            var error = new InvalidOperationException("Licence number already in use");
+            return new Result<T>(error);
+        }
 
-        if (garage.IsFull) return false;
+        if (garage.IsFull) {
+            var error = new InvalidOperationException("Garage full!");
+            return new Result<T>(error);
+        }
 
         garage.Add(vehicle);
-        return true;
+        return vehicle;
     }
 
     public bool RemoveVehicle(string licensePlate) {
@@ -35,7 +42,7 @@ public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
                 return true;
             },
             Fail: ex => false
-        ); 
+        );
     }
 
     public bool DoesLicencePlateExist(string? licencePlate) {
@@ -63,15 +70,15 @@ public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
 
     public Dictionary<Type, int> CountVehicleTypes(HashSet<Type> types) {
         var output = new Dictionary<Type, int>();
-    
+
         foreach (var type in types) {
             // var type = factory.ProducedVehicleType;
             var count = Garages.SelectMany(g => g)
                 .Count(v => v.GetType() == type);
-            output[type] = count; 
+            output[type] = count;
         }
-    
-        return output; 
+
+        return output;
     }
 
 
@@ -90,13 +97,12 @@ public class GarageHandler<T> : IGarageHandler<T> where T : IVehicle {
         }
 
         // if (output.Length > 0 && output.ToString().EndsWith(Environment.NewLine)) {
-            // output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+        // output.Remove(output.Length - Environment.NewLine.Length, Environment.NewLine.Length);
         // }
-        
+
         return output.ToString().TrimEnd();
     }
 }
-
 
 
 //

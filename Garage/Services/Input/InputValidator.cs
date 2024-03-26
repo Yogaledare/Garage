@@ -13,11 +13,6 @@ public static class InputValidator {
 
 
 
-    // public static Result<double> ValidateSpeed(string? input, ) {
-    //     
-    // }
-    
-
     public static Result<string> ValidateLicensePlate(string? input, IGarageHandler<IVehicle> garageHandler) {
         if (string.IsNullOrEmpty(input)) {
             var error = new ValidationException("Error: null or empty input");
@@ -28,6 +23,11 @@ public static class InputValidator {
         if (!Regex.IsMatch(input, pattern)) {
             var error = new ValidationException("License plate must be three capital letters followed by three digits.");
             return new Result<string>(error);
+        }
+
+        if (garageHandler.DoesLicencePlateExist(input)) {
+            var error = new ValidationException("Licence number already in use");
+            return new Result<string>(error); 
         }
         
         return input;
@@ -117,6 +117,28 @@ public static class InputValidator {
         
     }
 }
+
+
+
+
+// public static Result<double> ValidateSpeed(string? input, ) {
+//     
+// }
+
+
+// public static Result<IEnumerable<IVehicle>> ValidateQuery(string? input) {
+//     if (string.IsNullOrEmpty(input)) {
+//         var error = new ValidationException("Error: null or empty input");
+//         return new Result<IEnumerable<IVehicle>>(error);
+//     }
+//
+//     var tokens = input.Split(' ');
+//     var pairs = 
+//     
+//
+// }
+
+
 
 //
 //
