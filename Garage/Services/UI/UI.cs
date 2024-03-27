@@ -7,13 +7,25 @@ using static Garage.Services.Input.InputRetriever;
 
 namespace Garage.Services.UI;
 
+
+/// <summary>
+/// Handles user interaction and provides a console-based user interface for managing garages and vehicles.
+/// </summary>
 public class UI : IUI {
     private readonly IGarageHandler<IVehicle> _garageHandler;
     private readonly IVehicleFactoryProvider _factoryProvider;
     private readonly List<(string Description, Action Method)> _menuOptions;
+    
+    /// <summary>
+    /// Occurs when the user requests to exit the program.
+    /// </summary>
     public event Action OnExitRequested;
 
-
+    /// <summary>
+    /// Initializes a new instance of the UI class.
+    /// </summary>
+    /// <param name="garageHandler">The garage handler to manage vehicle storage.</param>
+    /// <param name="factoryProvider">The factory provider to create vehicle instances.</param>
     public UI(IGarageHandler<IVehicle> garageHandler, IVehicleFactoryProvider factoryProvider) {
         _garageHandler = garageHandler;
         _factoryProvider = factoryProvider;
@@ -30,7 +42,9 @@ public class UI : IUI {
         ];
     }
 
-
+    /// <summary>
+    /// Displays the main menu and handles user input for various actions.
+    /// </summary>
     public void MainMenu() {
         var continueRunning = true;
         OnExitRequested += () => continueRunning = false;
@@ -43,12 +57,17 @@ public class UI : IUI {
         }
     }
 
-
+    /// <summary>
+    /// Triggers the OnExitRequested event to signal the application to exit.
+    /// </summary>
     private void ExitProgram() {
         OnExitRequested?.Invoke();
     }
 
-
+    /// <summary>
+    /// Adds a new garage by prompting the user for capacity and then creates the garage using the garage handler.
+    /// Outputs the result to the console.
+    /// </summary>
     private void AddGarage() {
         var capacity = RetrieveInput("Capacity: ", ValidateNumber);
 
@@ -60,7 +79,11 @@ public class UI : IUI {
         }
     }
 
-
+    /// <summary>
+    /// Guides the user through the process of adding a vehicle to a garage.
+    /// This includes selecting a vehicle type, creating the vehicle, and choosing a garage to add the vehicle to.
+    /// Outputs the result to the console.
+    /// </summary>
     private void AddVehicle() {
         var garages = _garageHandler.Garages;
 
@@ -86,7 +109,10 @@ public class UI : IUI {
         Console.WriteLine(output);
     }
 
-
+    /// <summary>
+    /// Prompts the user for a license plate and attempts to remove the vehicle with that plate from the garages.
+    /// Outputs the result to the console.
+    /// </summary>
     private void RemoveVehicle() {
         var licensePlate = RetrieveInput("Licence plate: ", ValidateLicensePlateSearch);
         var result = _garageHandler.RemoveVehicle(licensePlate);
@@ -94,13 +120,19 @@ public class UI : IUI {
         Console.WriteLine(message);
     }
 
-
+    /// <summary>
+    /// Lists all available vehicle types that can be created and parked in garages.
+    /// This is determined by the vehicle factory provider and outputs the types to the console.
+    /// </summary>
     private void ListParkedVehicles() {
         var output = _garageHandler.ListContents();
         Console.WriteLine(output);
     }
 
-
+    /// <summary>
+    /// Lists all available vehicle types that can be created and parked in garages.
+    /// This is determined by the vehicle factory provider and outputs the types to the console.
+    /// </summary>
     private void ListVehicleTypes() {
         HashSet<Type> types = new HashSet<Type>();
 
@@ -126,7 +158,12 @@ public class UI : IUI {
         Console.WriteLine(stringBuilder.ToString());
     }
 
-
+    /// <summary>
+    /// Prompts the user to enter a license plate number to search for a vehicle across all garages.
+    /// Searches for the vehicle using the garage handler and outputs the search result.
+    /// If the vehicle is found, details of the vehicle and its location are displayed.
+    /// Otherwise, a message indicating the vehicle could not be found is shown.
+    /// </summary>
     private void SearchForVehicle() {
         Console.WriteLine("Enter licence plate to search for (format 'ABC123', non-case sensitive)");
         var input = RetrieveInput("Plate number: ", ValidateLicensePlateSearch);
@@ -147,7 +184,11 @@ public class UI : IUI {
         Console.WriteLine(output);
     }
 
-
+    /// <summary>
+    /// Initiates a query based on vehicle properties specified by the user.
+    /// Allows the user to build a query interactively and then performs a search based on the constructed query.
+    /// Outputs the matching vehicles to the console.
+    /// </summary>
     private void QueryOnProperties() {
         IVehicle searchObject = new QueryVehicle();
 
@@ -179,7 +220,10 @@ public class UI : IUI {
         }
     }
 
-
+    /// <summary>
+    /// Prompts the user to add conditions to a vehicle query, such as filtering by license plate, number of wheels, color, or top speed.
+    /// </summary>
+    /// <param name="searchObject">The vehicle object used to accumulate search criteria.</param>
     private void AddQueryCondition(IVehicle searchObject) {
         IEnumerable<(string, Action<IVehicle>)> searchOptions = [
             ("LicencePlate", EnterLicensePlateSearch),
@@ -195,7 +239,10 @@ public class UI : IUI {
         action(searchObject);
     }
 
-
+    /// <summary>
+    /// Pre-populates the system with a set of garages and vehicles for demonstration or testing purposes.
+    /// Outputs details of the added entities to the console.
+    /// </summary>
     private void PrePopulate() {
         _garageHandler.CreateGarage(4);
         _garageHandler.CreateGarage(10);
@@ -241,16 +288,3 @@ public class UI : IUI {
         }
     }
 }
-
-
-//
-//
-// private string BuildQueryStringDisplay(IVehicle searchObject) {
-//     StringBuilder stringBuilder = new StringBuilder();
-//     stringBuilder.Append(searchObject.LicencePlate is not null ? $"LicencePlate={searchObject.LicencePlate} " : "");
-//     stringBuilder.Append(searchObject.NumWheels is not null ? $"NumWheels={searchObject.NumWheels} " : "");
-//     stringBuilder.Append(searchObject.Color is not null ? $"NumWheels={searchObject.Color} " : "");
-//     stringBuilder.Append(searchObject.TopSpeed is not null ? $"NumWheels={searchObject.TopSpeed} " : "");
-//     var output = stringBuilder.ToString().Trim();
-//     return output != "" ? output : "(Empty)";
-// }

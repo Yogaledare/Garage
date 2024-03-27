@@ -6,7 +6,16 @@ using LanguageExt.Common;
 
 namespace Garage.Services.Input;
 
+/// <summary>
+/// Provides methods for validating user inputs against specific criteria and rules.
+/// </summary>
 public static class InputValidator {
+    /// <summary>
+    /// Validates a potential vehicle license plate, ensuring format correctness, non-null/empty input, and uniqueness.
+    /// </summary>
+    /// <param name="input">The license plate string to validate.</param>
+    /// <param name="garageHandler">An instance of IGarageHandler for checking license plate existence.</param>
+    /// <returns>A Result object. Success contains the validated license plate; Failure contains a ValidationException.</returns>
     public static Result<string> ValidateLicensePlate(string? input, IGarageHandler<IVehicle> garageHandler) {
         if (string.IsNullOrEmpty(input)) {
             var error = new ValidationException("Error: null or empty input");
@@ -27,7 +36,11 @@ public static class InputValidator {
         return input;
     }
 
-
+    /// <summary>
+    /// Validates a potential license plate search term, ensuring format correctness and non-null/empty input.
+    /// </summary>
+    /// <param name="input">The license plate string to validate.</param>
+    /// <returns>A Result object. Success contains the validated license plate; Failure contains a ValidationException.</returns>
     public static Result<string> ValidateLicensePlateSearch(string? input) {
         if (string.IsNullOrEmpty(input)) {
             var error = new ValidationException("Error: null or empty input");
@@ -43,7 +56,13 @@ public static class InputValidator {
         return input;
     }
 
-
+    /// <summary>
+    /// Validates a string input as an integer within a specified range.
+    /// </summary>
+    /// <param name="input">The input string to be validated.</param>
+    /// <param name="min">The inclusive minimum value of the range.</param>
+    /// <param name="max">The inclusive maximum value of the range.</param>
+    /// <returns>A Result object. Success contains the validated integer; Failure contains a ValidationException.</returns>
     public static Result<int> ValidateNumberBounded(string? input, int min, int max) {
         var normalNumberValidationResult = ValidateNumber(input);
 
@@ -59,7 +78,11 @@ public static class InputValidator {
             Fail: _ => normalNumberValidationResult);
     }
 
-
+    /// <summary>
+    /// Validates a string input as an integer.
+    /// </summary>
+    /// <param name="input">The input string to be validated.</param>
+    /// <returns>A Result object. Success contains the validated integer; Failure contains a ValidationException.</returns>
     public static Result<int> ValidateNumber(string? input) {
         if (string.IsNullOrEmpty(input)) {
             var error = new ValidationException("Error: null or empty input");
@@ -81,7 +104,13 @@ public static class InputValidator {
         return number;
     }
 
-
+    /// <summary>
+    /// Validates a string input as a double-precision number within a specified range.
+    /// </summary>
+    /// <param name="input">The input string to be validated.</param>
+    /// <param name="min">The inclusive minimum value of the range.</param>
+    /// <param name="max">The inclusive maximum value of the range.</param>
+    /// <returns>A Result object. Success contains the validated double; Failure contains a ValidationException.</returns>
     public static Result<double> ValidateDoubleBounded(string? input, double min, double max) {
         if (string.IsNullOrEmpty(input)) {
             var error = new ValidationException("Error: null or empty input");

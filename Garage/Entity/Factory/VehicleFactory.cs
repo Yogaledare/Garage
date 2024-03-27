@@ -1,62 +1,52 @@
 ﻿using Garage.Entity.Vehicles;
 using Garage.Services.GarageHandler;
-using static Garage.Services.Input.InputRetriever; 
+using static Garage.Services.Input.InputRetriever;
 
 namespace Garage.Entity.Factory;
 
-public abstract class VehicleFactory(IGarageHandler<IVehicle> garageHandler) : IVehicleFactory {
+/// <summary>
+/// Provides a base implementation for vehicle factories, handling common vehicle creation steps.
+/// </summary>
+public abstract class VehicleFactory : IVehicleFactory {
+    private readonly IGarageHandler<IVehicle> _garageHandler;
+
+    /// <summary>
+    /// Initializes a new instance of the VehicleFactory class.
+    /// </summary>
+    /// <param name="garageHandler">An instance of IGarageHandler for interacting with garages.</param>
+    protected VehicleFactory(IGarageHandler<IVehicle> garageHandler) {
+        _garageHandler = garageHandler;
+    }
+
+    /// <summary>
+    /// Creates a vehicle, setting its common properties using user input.
+    /// </summary>
+    /// <returns>A new instance of a vehicle with its properties set.</returns>
     public IVehicle CreateVehicle() {
         var vehicle = CreateSpecificVehicle();
         SetCommonProperties(vehicle);
         return vehicle;
     }
 
+    /// <summary>
+    /// Gets the type of vehicle produced by this factory.
+    /// </summary>
     public abstract Type ProducedVehicleType { get; }
 
-
+    /// <summary>
+    /// When implemented in a derived class, creates a specific type of vehicle (template method pattern).
+    /// </summary>
+    /// <returns>A new instance of a specific type of vehicle.</returns>
     protected abstract IVehicle CreateSpecificVehicle();
 
+    /// <summary>
+    /// Sets common properties for a vehicle such as license plate, number of wheels, color, and top speed by prompting the user for input.
+    /// </summary>
+    /// <param name="vehicle">The vehicle instance whose properties are to be set.</param>
     private void SetCommonProperties(IVehicle vehicle) {
-        EnterLicensePlate(vehicle, garageHandler);
+        EnterLicensePlate(vehicle, _garageHandler);
         EnterNumWheels(vehicle);
         EnterVehicleColor(vehicle);
         EnterTopSpeed(vehicle);
     }
 }
-
-
-      
-//
-//
-// public static void <T>(T vehicle) where T : IVehicle {
-//     vehicle.LicencePlate = RetrieveInput("License plate: ", ValidateLicensePlateSearch);
-// }
-//
-//
-// public static void EnterNumWheels<T>(T vehicle) where T : IVehicle {
-//     vehicle.NumWheels = RetrieveInput("NumWheels: ", s => ValidateNumberBounded(s, 0, 8));
-// }
-//
-//
-// public static void EnterVehicleColor<T>(T vehicle) where T : IVehicle {
-//     vehicle.Color = SelectFromEnum<VehicleColor>();
-// }
-//
-// public static void EnterTopSpeed<T>(T vehicle) where T : IVehicle {
-//     vehicle.TopSpeed = RetrieveInput("TopSpeed: ", s => ValidateNumberBounded(s, 0, 450)); 
-// }
-        
-// vehicle.LicencePlate = InputRetriever.RetrieveInput(
-//     "LicensePlate: ",
-//     s => InputValidator.ValidateLicensePlate(s, garageHandler)
-// );
-// vehicle.NumWheels = InputRetriever.RetrieveInput(
-//     "numWheels: ",
-//     s => InputValidator.ValidateNumberBounded(s, 0, 4)
-// );
-// vehicle.Color = InputRetriever.SelectFromEnum<VehicleColor>();
-// vehicle.TopSpeed = InputRetriever.RetrieveInput(
-//     "TopSpeed: ",
-//     s => InputValidator.ValidateDoubleBounded(s, 0, 450)
-// );
-

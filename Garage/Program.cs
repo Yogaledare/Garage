@@ -8,7 +8,14 @@ using Microsoft.Extensions.Hosting;
 
 namespace Garage;
 
+/// <summary>
+/// Represents the central entry point of the Garage application.
+/// </summary>
 public class Program {
+    /// <summary>
+    /// Application's main execution point. Configures services and launches the user interface.
+    /// </summary>
+    /// <param name="args">Command-line arguments provided to the application.</param>
     static void Main(string[] args) {
         var host = Host.CreateDefaultBuilder(args)
             .ConfigureServices(services => {
