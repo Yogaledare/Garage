@@ -151,7 +151,7 @@ public class UI : IUI {
                 stringBuilder.Append(',');
             }
 
-            stringBuilder.Append($" {type.Name} ({count}),");
+            stringBuilder.Append($" {type.Name} ({count})");
             isFirst = false;
         }
 
