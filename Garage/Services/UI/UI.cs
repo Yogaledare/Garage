@@ -149,7 +149,7 @@ public class UI : IUI {
 
 
     private void QueryOnProperties() {
-        IVehicle searchObject = new Car();
+        IVehicle searchObject = new QueryVehicle();
 
         var continueLooping = true;
         var mainOptions = new List<(string Description, Action)> {
@@ -160,8 +160,8 @@ public class UI : IUI {
         };
 
         while (continueLooping) {
-            var queryString = BuildQueryStringDisplay(searchObject);
-            Console.WriteLine($"Query string: {queryString}");
+            // var queryString = searchObject);
+            Console.WriteLine($"Query string: {searchObject.ToString()}");
             var choice = SelectFromMenu(mainOptions, "Action");
             choice();
         }
@@ -177,17 +177,6 @@ public class UI : IUI {
                 Console.WriteLine(vehicle);
             }
         }
-    }
-
-
-    private string BuildQueryStringDisplay(IVehicle searchObject) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.Append(searchObject.LicencePlate is not null ? $"LicencePlate={searchObject.LicencePlate} " : "");
-        stringBuilder.Append(searchObject.NumWheels is not null ? $"NumWheels={searchObject.NumWheels} " : "");
-        stringBuilder.Append(searchObject.Color is not null ? $"NumWheels={searchObject.Color} " : "");
-        stringBuilder.Append(searchObject.TopSpeed is not null ? $"NumWheels={searchObject.TopSpeed} " : "");
-        var output = stringBuilder.ToString().Trim();
-        return output != "" ? output : "(Empty)";
     }
 
 
@@ -252,3 +241,16 @@ public class UI : IUI {
         }
     }
 }
+
+
+//
+//
+// private string BuildQueryStringDisplay(IVehicle searchObject) {
+//     StringBuilder stringBuilder = new StringBuilder();
+//     stringBuilder.Append(searchObject.LicencePlate is not null ? $"LicencePlate={searchObject.LicencePlate} " : "");
+//     stringBuilder.Append(searchObject.NumWheels is not null ? $"NumWheels={searchObject.NumWheels} " : "");
+//     stringBuilder.Append(searchObject.Color is not null ? $"NumWheels={searchObject.Color} " : "");
+//     stringBuilder.Append(searchObject.TopSpeed is not null ? $"NumWheels={searchObject.TopSpeed} " : "");
+//     var output = stringBuilder.ToString().Trim();
+//     return output != "" ? output : "(Empty)";
+// }
